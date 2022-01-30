@@ -24,8 +24,8 @@
     "simulation":{
 
         "community_size" : 100, 
-        "number_of_communities" : 1
-         
+        "community_layout": [2, 2, 2]
+
     },
 
     "app" : {
