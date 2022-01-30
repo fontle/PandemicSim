@@ -46,15 +46,18 @@ class Simulation:
     def calculate_communities(self):
         communities = []
         app_width, app_height = self.app_size
-        x_buffer = app_width/10 
-        y_buffer = app_height/10
-        layout = self.sim_vars['community_layout']
-        height = app_height/len(layout)
-        for y, cols in enumerate(layout):
-            width = app_width/cols
-            for x in range(cols):
-                coords = (x*width+x_buffer, y*height+y_buffer) 
+        layout = self.sim_vars['community_layout'] 
+        y_buffer = 10 # The pixels between each row of communities 
+        x_buffer = 10 # The pixels between each column of communities
+        width = 100 # The width of each community
+        height = 100 # The height of each community 
+        
+        # Create each community in grid defined by layout
+        for y, cols in enumerate(layout): # y counts how many rows in 
+            for x in range(cols): # x counts how many columns in 
+                coords = (x*(width+x_buffer), y*(height+y_buffer)) 
                 communities.append(Community(coords, (width, height), self.sim_vars, self.theme))
+                
         return communities
 
     def pause(self) -> None:
@@ -129,7 +132,6 @@ class Community():
     def update(self) -> None:
 
         self.surface.fill(self.theme['community_background'])
-        print('1')
         self.population.draw(self.surface)
         self.population.update()
 
