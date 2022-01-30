@@ -41,17 +41,21 @@ class Simulation:
         self.app_size = tuple(config['app']['window_size'])
         self.theme = config['theme'][config['app']['theme']]
         self.sim_vars = config['simulation']    
-        self.communities = [] 
-
-        # Create every community for simulation  
-        for i in range(self.sim_vars['number_of_communities']):
-            
-            x, y = community_size
-            community_size = (x, y)
-
-
-
-            self.communities.append(Community(, self.sim_vars, self.theme))
+        self.communities = self.calculate_communities()
+    
+    def calculate_communities(self):
+        communities = []
+        app_width, app_height = self.app_size
+        x_buffer = app_width/10 
+        y_buffer = app_height/10
+        layout = self.sim_vars['community_layout']
+        height = app_height/len(layout)
+        for y, cols in enumerate(layout):
+            width = app_width/cols
+            for x in range(cols):
+                coords = (x*width+x_buffer, y*height+y_buffer) 
+                communities.append(Community(coords, (width, height), self.sim_vars, self.theme))
+        return communities
 
     def pause(self) -> None:
         pass
@@ -87,7 +91,7 @@ class Simulation:
             # Render the canvas of each community and update
             for community in self.communities:
                 community.update()
-                self.window.blit(community.surface, (0,0))
+                self.window.blit(community.surface, community.coords)
 
             for event in pygame.event.get():
                 # User closed window -> quit application
@@ -103,9 +107,9 @@ class Community():
     '''
     Is a pygame frame that sits encapsulated within simulation
     '''
-    def __init__(self, surface_size, sim_vars, theme) -> None:
+    def __init__(self, coords, surface_size, sim_vars, theme) -> None:
 
-        
+        self.coords = coords 
         self.surface_size = surface_size
         self.surface = pygame.Surface(self.surface_size)
         self.sim_vars = sim_vars
@@ -114,8 +118,8 @@ class Community():
         self.population = pygame.sprite.Group()
 
         for person in range(self.sim_vars['community_size']):
-            x = random.randint(1,self.surface_size[0])
-            y = random.randint(1,self.surface_size[1])
+            x = random.uniform(1,self.surface_size[0])
+            y = random.uniform(1,self.surface_size[1])
             self.population.add(Person((x, y), self.sim_vars, self.theme))
 
     def calculate_infected(self):
@@ -170,7 +174,7 @@ class Test:
 
         def init():
             # Tests __init__ of simulation class 
-            simulation = Simulation(os.getcwd()+'\\Refactored\\config.json')
+            simulation = Simulation(os.getcwd()+'\\config.json')
             simulation.run() 
 
 if __name__ == '__main__':
