@@ -1,3 +1,6 @@
+# Author: Isaac Beight-Welland 
+# A simple pandemic simulation created in pygame. 
+# Made for AQA A level Computer Science NEA 2021/22
 
 import pygame, json, os, render, random, time
 
@@ -47,15 +50,15 @@ class Simulation:
         communities = []
         app_width, app_height = self.app_size
         layout = self.sim_vars['community_layout'] 
-        y_buffer = 10 # The pixels between each row of communities 
-        x_buffer = 10 # The pixels between each column of communities
-        width = 100 # The width of each community
-        height = 100 # The height of each community 
-        
+        y_buffer = app_height/(len(layout)*10) # The pixels between each row of communities 
+        height = round((app_height - (y_buffer*(len(layout)+1))) / len(layout), 2) 
         # Create each community in grid defined by layout
         for y, cols in enumerate(layout): # y counts how many rows in 
+            x_buffer = app_width/(cols*10) # The pixels between each column of communities
+            width = round((app_width - (x_buffer*(cols+1))) / cols, 2)  
             for x in range(cols): # x counts how many columns in 
-                coords = (x*(width+x_buffer), y*(height+y_buffer)) 
+                coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+y_buffer)+y_buffer) 
+                print(coords)
                 communities.append(Community(coords, (width, height), self.sim_vars, self.theme))
                 
         return communities

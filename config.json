@@ -24,12 +24,12 @@
     "simulation":{
 
         "community_size" : 100, 
-        "community_layout": [2, 2, 2]
+        "community_layout": [6, 2, 6, 6, 6, 6]
 
     },
 
     "app" : {
-        "window_size" : [800, 800],
+        "window_size" : [700, 700],
         "sidebar_size" : [200, 800],
         "theme" : "dark"
         
