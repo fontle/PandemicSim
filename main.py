@@ -1,4 +1,6 @@
-
+# Author: Isaac Beight-Welland 
+# A simple pandemic simulation created in pygame. 
+# Made for AQA A level Computer Science NEA 2021/22
 import pygame, json, os, render, random, time
 
 class Pathogen:
@@ -41,17 +43,24 @@ class Simulation:
         self.app_size = tuple(config['app']['window_size'])
         self.theme = config['theme'][config['app']['theme']]
         self.sim_vars = config['simulation']    
-        self.communities = [] 
-
-        # Create every community for simulation  
-        for i in range(self.sim_vars['number_of_communities']):
-            
-            x, y = community_size
-            community_size = (x, y)
-
-
-
-            self.communities.append(Community(, self.sim_vars, self.theme))
+        self.communities = self.calculate_communities()
+    
+    def calculate_communities(self):
+        communities = []
+        app_width, app_height = self.app_size
+        layout = self.sim_vars['community_layout'] 
+        y_buffer = app_height/(len(layout)*10) # The pixels between each row of communities 
+        height = round((app_height - (y_buffer*(len(layout)+1))) / len(layout), 2) 
+        # Create each community in grid defined by layout
+        for y, cols in enumerate(layout): # y counts how many rows in 
+            x_buffer = app_width/(cols*10) # The pixels between each column of communities
+            width = round((app_width - (x_buffer*(cols+1))) / cols, 2)  
+            for x in range(cols): # x counts how many columns in 
+                coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+y_buffer)+y_buffer) 
+                print(coords)
+                communities.append(Community(coords, (width, height), self.sim_vars, self.theme))
+                
+        return communities
 
     def pause(self) -> None:
         pass
@@ -87,7 +96,7 @@ class Simulation:
             # Render the canvas of each community and update
             for community in self.communities:
                 community.update()
-                self.window.blit(community.surface, (0,0))
+                self.window.blit(community.surface, community.coords)
 
             for event in pygame.event.get():
                 # User closed window -> quit application
@@ -103,9 +112,10 @@ class Community():
     '''
     Is a pygame frame that sits encapsulated within simulation
     '''
-    def __init__(self, surface_size, sim_vars, theme) -> None:
-
         
+    def __init__(self, coords, surface_size, sim_vars, theme) -> None:
+
+        self.coords = coords 
         self.surface_size = surface_size
         self.surface = pygame.Surface(self.surface_size)
         self.sim_vars = sim_vars
@@ -114,9 +124,9 @@ class Community():
         self.population = pygame.sprite.Group()
 
         for person in range(self.sim_vars['community_size']):
-            x = random.randint(1,self.surface_size[0])
-            y = random.randint(1,self.surface_size[1])
-            self.population.add(Person((x, y), self.sim_vars, self.theme))
+           x = random.uniform(1,self.surface_size[0])
+           y = random.uniform(1,self.surface_size[1])
+           self.population.add(Person((x, y), self.sim_vars, self.theme))
 
     def calculate_infected(self):
         pass
@@ -125,7 +135,6 @@ class Community():
     def update(self) -> None:
 
         self.surface.fill(self.theme['community_background'])
-        print('1')
         self.population.draw(self.surface)
         self.population.update()
 
@@ -170,7 +179,7 @@ class Test:
 
         def init():
             # Tests __init__ of simulation class 
-            simulation = Simulation(os.getcwd()+'\\Refactored\\config.json')
+            simulation = Simulation(os.getcwd()+'\\config.json')
             simulation.run() 
 
 if __name__ == '__main__':
