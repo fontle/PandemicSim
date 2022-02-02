@@ -41,20 +41,26 @@ class Simulation:
             config = json.loads(config_file.read())
 
         self.app_size = tuple(config['app']['window_size'])
+        self.sidebar_size = tuple(config['app']['sidebar_size'])
+        
+        self.window_size = self.app_size[0] + self.sidebar_size[0], max([self.app_size[1], self.sidebar_size[1]])  
         self.theme = config['theme'][config['app']['theme']]
         self.sim_vars = config['simulation']    
         self.communities = self.calculate_communities()
-    
+   
     def calculate_communities(self):
+
         communities = []
         app_width, app_height = self.app_size
         layout = self.sim_vars['community_layout'] 
         y_buffer = app_height/(len(layout)*10) # The pixels between each row of communities 
         height = round((app_height - (y_buffer*(len(layout)+1))) / len(layout)) 
+
         # Create each community in grid defined by layout
         for y, cols in enumerate(layout): # y counts how many rows in 
             x_buffer = app_width/(cols*10) # The pixels between each column of communities
             width = round((app_width - (x_buffer*(cols+1))) / cols)  
+
             for x in range(cols): # x counts how many columns in 
                 coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+y_buffer)+y_buffer) 
                 communities.append(Community(coords, (width, height), self.sim_vars, self.theme))
@@ -84,7 +90,7 @@ class Simulation:
     def run(self) -> None:
         
         # Create application size defined by config json
-        self.window = pygame.display.set_mode(self.app_size)
+        self.window = pygame.display.set_mode(self.window_size)
         self.running = True
         bgcolor = self.theme['app_background'] 
 
