@@ -32,13 +32,191 @@ class Mitigations:
     def __init__(self):
         pass
 
+class Render:
+
+    def __alpha_rect(surface: pygame.Surface, colour: tuple, rect: tuple):
+        '''
+        Creates a rectangle with transparent colour.
+        Arguments:
+            colour: (r, g, b, a)
+            rect: (x, y, width, height)
+        '''
+
+        shape_surface = pygame.Surface(pygame.Rect(rect).size, pygame.SRCALPHA)
+        pygame.draw.rect(shape_surface, colour, shape_surface.get_rect())
+        surface.blit(shape_surface, rect)
+
+
+    def __alpha_circle(surface: pygame.Surface, colour: tuple, center: tuple, radius: int):
+        '''
+        Creates a circle with transparent colour.
+
+        Arguments: 
+            colour -- (r, g, b, a)
+            center -- (x, y)
+        '''
+
+        target_rect = pygame.Rect(center, (0, 0)).inflate((radius * 2, radius * 2))
+        shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
+        pygame.draw.circle(shape_surf, colour, (radius, radius), radius)
+        surface.blit(shape_surf, target_rect)
+
+
+    def __alpha_polygon(surface: str, colour: tuple, points: tuple):
+        '''
+        Creates transparent polygon with defined number of points.
+
+        Arguments:
+            colour -- (r, g, b, a)
+            points -- ((x1, y1), (x2, y2), (x3, y3) ... )
+        '''
+
+        lx, ly = zip(*points)
+        min_x, min_y, max_x, max_y = min(lx), min(ly), max(lx), max(ly)
+
+        target_rect = pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
+        shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
+        pygame.draw.polygon(shape_surf, colour, [
+                            (x - min_x, y - min_y) for x, y in points])
+        surface.blit(shape_surf, target_rect)
+
+
+    def normal_speed_symbol(surface: pygame.Surface):
+        '''
+        Renders normal speed symbol on top left of surface provided.
+        '''
+        __alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
+        __alpha_polygon(surface, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
+
+
+    def fast_symbol(surface: pygame.Surface):
+        '''
+        Renders fast speed symbol on top left surface provided.
+        '''
+        __alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
+        __alpha_polygon(surface, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
+        __alpha_polygon(surface, (255, 255, 255, 100), ((50, 10), (70, 20), (50, 30)))
+
+
+    def slow_symbol(surface: pygame.Surface):
+        '''
+        Renders slow speed symbol on top left surface provided.
+        '''
+        __alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
+
+
+
+class Graph(pygame.Surface):
+
+    def __init__(self, size: tuple[int, int], font:int, theme:dict, title = ''):
+        
+        # Initialise vars 
+        self.surf = pygame.Surface((size))
+        self.theme = theme
+        self.font = font
+        # Render title in initialisation as will never change 
+        self.title = self.font.render(title, True, self.theme['susceptible'])
+        # Format dimensions of frame
+        self.width, self.height = size 
+        self.n_buff = self.height // 10
+        # South buffer must be large to accommodate for title 
+        self.s_buff = self.height // 8
+        self.w_buff = self.width // 10
+        self.e_buff = self.width // 10
+        # Create values to be plotted 
+        self.values = []
+
+
+    def plot(self, value, line=0): 
+        '''Purpose: Takes single value or multiple, adds to values plotted by draw.'''
+        print(value)
+        if type(value) is int:
+            self.values.append([value])
+        elif type(value) is list:
+            
+            if type(value[0]) is int:
+                self.values += [values] 
+            elif type(value[0]) is list:
+                for i in range(len(value)):
+                    try: 
+                        self.values[i] += value[i]
+                    except IndexError: # Haven't added points to this line yet
+                        self.values.append(value[i])
+        else:
+            raise AttributeError('Received unexpected type when plotting to graph.')
+        print(self.values)
+
+
+    def draw(self, *, maximum = 0):
+        '''
+        Purpose: Draws graph and its values onto surface
+        '''
+        self.surf.fill(self.theme['app_background'])
+        self.surf.blit(self.title, (self.w_buff, self.height-self.s_buff))
+
+        # Set maximum value of y-scale
+        if maximum == 0:
+            # If maximum value not provided then set the highest value in plots as y_max
+            self.y_max = max([max(val) for val in self.values if len(val) > 0])
+            
+        else: # Max value provided
+            self.y_max = maximum 
+
+        self.y_axis = pygame.draw.line(
+                self.surf,
+                self.theme['susceptible'],
+                (self.w_buff, self.n_buff),
+                (self.w_buff, self.height-self.s_buff), 
+                width=2)
+        
+        self.y_scale = (self.height-self.n_buff - self.s_buff)/self.y_max
+
+        self.x_axis = pygame.draw.line(
+            self.surf,
+            self.theme['susceptible'],  
+            (self.w_buff, self.height - self.s_buff), 
+            (self.width-self.e_buff, self.height-self.s_buff), 
+            width=2)
+
+        self.x_max = max([len(line) for line in self.values])
+        self.x_scale = (self.width-self.e_buff-self.w_buff)/self.x_max
+        
+        # Decreases the values to be rendered, when the length of values greater than width of graph area
+        if self.x_scale <= 1:
+
+            # Deletes every 20 items from each line, increasing x_scale to a point greater than 1 
+            for line in range(len(self.values)):
+                del self.values[line][::20]
+
+        # Plot points for each line
+        for line_count, line in enumerate(self.values):
+
+            x_last = round(self.w_buff + (self.x_scale / 2))
+            y_last = round((self.height - self.s_buff) - (self.y_scale * line[0]))
+
+            for point_count, point in enumerate(line):
+                
+                x_pos = round(self.w_buff + (self.x_scale * point_count) + (self.x_scale / 2))
+                y_pos = round((self.height - self.s_buff) - (self.y_scale * point))
+
+                # Draws line between current and last position
+                pygame.draw.line(
+                    self.surf, 
+                    self.theme['infected'], 
+                    (x_last, y_last), 
+                    (x_pos, y_pos), 
+                    width=4
+                    )
+
+                x_last, y_last = x_pos, y_pos
+
 
 class Simulation: 
     '''
     Purpose: Controls the main pygame window, has Communnity instances as frames 
     '''
 
-    def __init__(self, config) -> None:
+    def __init__(self, config:str) -> None:
 
         with open(config, 'r') as config_file:
             config = json.loads(config_file.read())
@@ -51,6 +229,7 @@ class Simulation:
         self.sim_vars = config['simulation']    
         self.communities = self.calculate_communities()
    
+
     def calculate_communities(self) -> list:
 
         communities = []
@@ -62,9 +241,10 @@ class Simulation:
         # Create each community in grid defined by layout
         for y, cols in enumerate(layout): # y counts how many rows in 
             x_buffer = sim_width/(cols*10) # The pixels between each column of communities
-            width = round((sim_width - (x_buffer*(cols+1))) / cols)  
-
+            # Round to prevent floating error when dividing
+            width = round((sim_width - (x_buffer*(cols+1))) / cols) 
             for x in range(cols): # x counts how many columns in 
+                # Round do prevent float error when dividing
                 coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+self.y_buffer)+self.y_buffer) 
                 communities.append(Community(coords, (width, height), self.sim_vars, self.theme))
                 
@@ -89,18 +269,15 @@ class Simulation:
 
         Purpose: Controls the rendering of the sidebar in pygame window. 
         '''
-        infected_label = self.font.render(f'Infected:{10}', True, self.theme['susceptible'])
+        infected_label = self.font.render(f'Infected:{10}', True, self.theme['infected'])
         susceptible_label = self.font.render(f'Susceptible:{10}', True, self.theme['susceptible'])
      
-        x_coord =  (self.sidebar_size[0] // 10) 
-        y_coord =  self.y_buffer 
-
-        self.sidebar_surf.blit(infected_label, (x_coord, y_coord))
-        self.sidebar_surf.blit(susceptible_label, (x_coord, y_coord + self.font_size)) 
+        self.sidebar_surf.blit(susceptible_label, (0, self.y_buffer))
+        self.sidebar_surf.blit(infected_label, (0, self.y_buffer + self.font_size * 1.25)) 
 
     def __render_graph(self) -> None:
-        pass
-
+        self.graph.draw()
+        self.sidebar_surf.blit(self.graph.surf, (0, self.sim_size[1]//2))
 
     def run(self) -> None:
         
@@ -113,12 +290,13 @@ class Simulation:
         self.controls_surf = pygame.Surface(self.controls_size)
         self.running = True
         bgcolor = self.theme['app_background'] 
-
         # Font Initialisation
-        self.font_size = self.sidebar_size[1] // 50 
+        self.font_size = self.sidebar_size[1] // 25 
         self.font = pygame.font.SysFont('Calibri', self.font_size)
-
-
+        # Create graph to be rendered in sidebar
+        self.graph = Graph((self.sidebar_size[0], self.sim_size[1]//2), self.font, self.theme)
+        self.graph.plot([[1,2,3,4,5], [5,4,3,2,1]])
+        
         while self.running:
             
             self.sim_surf.fill(bgcolor) # Fill background            
@@ -127,6 +305,7 @@ class Simulation:
             self.botbar_surf.fill(bgcolor)
 
             self.__render_sidebar()
+            self.__render_graph()
 
             # Render the canvas of each community and update
             for community in self.communities:
@@ -166,7 +345,7 @@ class Community():
         self.population = pygame.sprite.Group()
 
         for person in range(self.sim_vars['community_size']):
-          self.population.add(Person(self.surface_size, self.sim_vars, self.theme))
+            self.population.add(Person(self.surface_size, self.sim_vars, self.theme))
 
     def calculate_infected(self):
         pass
