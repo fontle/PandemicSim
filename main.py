@@ -6,10 +6,9 @@ import pygame, json, os, render, random, time
 pygame.init()
 pygame.font.init()
 
-
 class Pathogen:
     '''
-    Class that contains methods for characteristics of pathogen spread
+    Purpose: Class that contains methods for characteristics of pathogen spread
     '''
 
     def __init__(self) -> None:
@@ -18,7 +17,7 @@ class Pathogen:
 
     def infect(self, person, infected) -> bool:
         '''
-        Given two people who have been in contact;
+        Purpose: Given two people who have been in contact;
         returns whether the infected person infects the other 'person'
         ''' 
         pass
@@ -26,7 +25,7 @@ class Pathogen:
 
 class Mitigations:
     '''
-    Class that contains methods for characteristics of mitigations against
+    Purpose: Class that contains methods for characteristics of mitigations against
     pathogen spread
     '''
     
@@ -36,7 +35,7 @@ class Mitigations:
 
 class Simulation: 
     '''
-    Controls the main pygame window, has Communnity instances as frames 
+    Purpose: Controls the main pygame window, has Communnity instances as frames 
     '''
 
     def __init__(self, config) -> None:
@@ -52,13 +51,13 @@ class Simulation:
         self.sim_vars = config['simulation']    
         self.communities = self.calculate_communities()
    
-    def calculate_communities(self):
+    def calculate_communities(self) -> list:
 
         communities = []
         sim_width, sim_height = self.sim_size
         layout = self.sim_vars['community_layout'] 
-        y_buffer = sim_height/(len(layout)*10) # The pixels between each row of communities 
-        height = round((sim_height - (y_buffer*(len(layout)+1))) / len(layout)) 
+        self.y_buffer = sim_height/(len(layout)*10) # The pixels between each row of communities 
+        height = round((sim_height - (self.y_buffer*(len(layout)+1))) / len(layout)) 
 
         # Create each community in grid defined by layout
         for y, cols in enumerate(layout): # y counts how many rows in 
@@ -66,10 +65,11 @@ class Simulation:
             width = round((sim_width - (x_buffer*(cols+1))) / cols)  
 
             for x in range(cols): # x counts how many columns in 
-                coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+y_buffer)+y_buffer) 
+                coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+self.y_buffer)+self.y_buffer) 
                 communities.append(Community(coords, (width, height), self.sim_vars, self.theme))
                 
         return communities
+
 
     def __pause(self) -> None:
         pass
@@ -83,11 +83,20 @@ class Simulation:
         pass 
 
 
-    def __render_info(self) -> None:
+    def __render_sidebar(self) -> None:
+        '''
+        !Warning: This method is PRIVATE and should only be called by the Simulation.run method!
 
+        Purpose: Controls the rendering of the sidebar in pygame window. 
+        '''
         infected_label = self.font.render(f'Infected:{10}', True, self.theme['susceptible'])
         susceptible_label = self.font.render(f'Susceptible:{10}', True, self.theme['susceptible'])
- 
+     
+        x_coord =  (self.sidebar_size[0] // 10) 
+        y_coord =  self.y_buffer 
+
+        self.sidebar_surf.blit(infected_label, (x_coord, y_coord))
+        self.sidebar_surf.blit(susceptible_label, (x_coord, y_coord + self.font_size)) 
 
     def __render_graph(self) -> None:
         pass
@@ -106,12 +115,18 @@ class Simulation:
         bgcolor = self.theme['app_background'] 
 
         # Font Initialisation
-        self.font = pygame.font.SysFont('Calibri', 20)
+        self.font_size = self.sidebar_size[1] // 50 
+        self.font = pygame.font.SysFont('Calibri', self.font_size)
+
 
         while self.running:
             
             self.sim_surf.fill(bgcolor) # Fill background            
             self.sidebar_surf.fill(bgcolor) # Fill background            
+            self.controls_surf.fill(bgcolor)
+            self.botbar_surf.fill(bgcolor)
+
+            self.__render_sidebar()
 
             # Render the canvas of each community and update
             for community in self.communities:
@@ -122,6 +137,10 @@ class Simulation:
                 # User closed window -> quit application
                 if event.type == pygame.QUIT: 
                     self.running = False
+                
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        self.running = False
 
             self.window.blit(self.sim_surf, (0, 0))
             self.window.blit(self.sidebar_surf, (self.sim_size[0], 0))
