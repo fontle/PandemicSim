@@ -28,8 +28,9 @@
     },
 
     "app" : {
-        "window_size" : [700, 700],
-        "sidebar_size" : [200, 800],
+	"sim_size" : [600, 600], 
+	"sidebar_width" : 200,
+	"bar_height" : 200,
         "theme" : "dark"
         
     }
