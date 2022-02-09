@@ -360,33 +360,46 @@ class Community():
 
 class Person(pygame.sprite.Sprite):
 
-    def __init__(self, community_size, sim_vars, theme=None) -> None:
+    def __init__(self, community_size, sim_vars, theme) -> None:
 
-        # If people will be rendered then a colour palette is required 
-        if render and theme == None:
-            raise AttributeError("No 'theme' attribute provided for person to use")
-
-        self.community_size = community_size
+        # Initialise sprite to allow rendering
         pygame.sprite.Sprite.__init__(self)
+
+        # Simulation variables 
+        self.community_size = community_size
+        self.sim_vars = sim_vars 
+        self.theme = theme
+
+        # Person size and surface to be rendered 
         self.size = (5,5)
-        self.image = pygame.Surface(self.size) # Set size of object that is rendered to window
-        self.image.fill(theme['susceptible']) # Set background to colour of uninfected person
-        self.rect = self.image.get_rect() # The rectangle object that controlls position of person 
+        self.image = pygame.Surface(self.size) 
+        self.image.fill(self.theme['susceptible']) 
+
+        # Person location 
+        self.rect = self.image.get_rect() 
         self.rect.x = random.randint(1,self.community_size[0] - self.size[0])
         self.rect.y = random.randint(1,self.community_size[1] - self.size[1])
-        self.sim_vars = sim_vars # Get simulation variables from config.json  loaded in community
+
+        # Person behaviour variables
         self.movement = 2  
+        self.infected = False
+
 
     def infect(self):
         '''
         Infects a person
         '''
-        pass
+        self.infected = True
+        self.image.fill(self.theme['infected'])
 
 
-    def update(self):
+    def __update_animation(self):
+        pass 
+
+
+    def __update_movement(self):
         '''
-        Controls movement of person: is set to random wihout mitigations. 
+        Controls movement of the person.
         '''
         new_x = eval(f'{self.rect.x}{random.choice(["+", "-"])}{self.movement}')
         new_y = eval(f'{self.rect.y}{random.choice(["+", "-"])}{self.movement}')
@@ -407,6 +420,10 @@ class Person(pygame.sprite.Sprite):
         self.rect.x = new_x
         self.rect.y = new_y
     
+    def update(self):
+
+        self.__update_movement()
+        self.__update_animation()
    
 
 class Test:
