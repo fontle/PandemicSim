@@ -1,8 +1,8 @@
 # Author: Isaac Beight-Welland 
 # A simple pandemic simulation created in pygame. 
 # Made for AQA A level Computer Science NEA 2021/22
-import pygame, json, os, render, random, time
-
+import pygame, json, os, random, time, math
+from dataclasses import dataclass 
 pygame.init()
 pygame.font.init()
 
@@ -34,7 +34,7 @@ class Mitigations:
 
 class Render:
 
-    def __alpha_rect(surface: pygame.Surface, colour: tuple, rect: tuple):
+    def __alpha_rect(self, surface: pygame.Surface, colour: tuple, rect: tuple):
         '''
         Creates a rectangle with transparent colour.
         Arguments:
@@ -47,7 +47,7 @@ class Render:
         surface.blit(shape_surface, rect)
 
 
-    def __alpha_circle(surface: pygame.Surface, colour: tuple, center: tuple, radius: int):
+    def __alpha_circle(self, surface: pygame.Surface, colour: tuple, center: tuple, radius: int):
         '''
         Creates a circle with transparent colour.
 
@@ -62,7 +62,7 @@ class Render:
         surface.blit(shape_surf, target_rect)
 
 
-    def __alpha_polygon(surface: str, colour: tuple, points: tuple):
+    def __alpha_polygon(self, surface: str, colour: tuple, points: tuple):
         '''
         Creates transparent polygon with defined number of points.
 
@@ -81,29 +81,37 @@ class Render:
         surface.blit(shape_surf, target_rect)
 
 
-    def normal_speed_symbol(surface: pygame.Surface):
+    def normal_speed_symbol(self, surface: pygame.Surface):
         '''
         Renders normal speed symbol on top left of surface provided.
         '''
-        __alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
-        __alpha_polygon(surface, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
+        self.__alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
+        self.__alpha_polygon(surface, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
 
 
-    def fast_symbol(surface: pygame.Surface):
+    def fast_symbol(self, surface: pygame.Surface):
         '''
         Renders fast speed symbol on top left surface provided.
         '''
-        __alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
-        __alpha_polygon(surface, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
-        __alpha_polygon(surface, (255, 255, 255, 100), ((50, 10), (70, 20), (50, 30)))
+        self.__alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
+        self.__alpha_polygon(surface, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
+        self.__alpha_polygon(surface, (255, 255, 255, 100), ((50, 10), (70, 20), (50, 30)))
 
 
-    def slow_symbol(surface: pygame.Surface):
+    def slow_symbol(self, surface: pygame.Surface):
         '''
         Renders slow speed symbol on top left surface provided.
         '''
-        __alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
+        self.__alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
+    
 
+    def pause_symbol(self, surface: pygame.Surface):
+        '''
+        Renders slow speed symbol on top left surface provided.
+        '''
+        width = surface.get_rect().width
+        self.__alpha_rect(surface, (180, 180, 180, 4),(width- 20, 10, 10, 30))
+        self.__alpha_rect(surface, (180, 180, 180, 4),(width - 37, 10, 10, 30))
 
 
 class Graph(pygame.Surface):
@@ -129,7 +137,6 @@ class Graph(pygame.Surface):
 
     def plot(self, value, line=0): 
         '''Purpose: Takes single value or multiple, adds to values plotted by draw.'''
-        print(value)
         if type(value) is int:
             self.values.append([value])
         elif type(value) is list:
@@ -144,7 +151,6 @@ class Graph(pygame.Surface):
                         self.values.append(value[i])
         else:
             raise AttributeError('Received unexpected type when plotting to graph.')
-        print(self.values)
 
 
     def draw(self, *, maximum = 0):
@@ -252,7 +258,28 @@ class Simulation:
 
 
     def __pause(self) -> None:
-        pass
+        '''
+        Handles the pause state of the simulation.
+        '''
+
+        paused = True
+
+        while paused:
+
+            # Render Pause bars
+            self.render.pause_symbol(self.window)
+            # Event handling for pause menu
+            for event in pygame.event.get():
+
+                if event.type == pygame.QUIT:
+                    paused = False
+                    self.running = False
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        paused = False
+
+            pygame.display.update()
 
 
     def __speed_up(self) -> None:
@@ -284,19 +311,25 @@ class Simulation:
         # Create application size defined by config json
         window_size = (self.sim_size[0] + self.sidebar_size[0], self.sim_size[1] + self.botbar_size[1])
         self.window = pygame.display.set_mode(window_size)
+        self.render = Render() # Create render methods for standard symbols 
+
+        # Create GUI layout
         self.sim_surf= pygame.Surface(self.sim_size)
         self.sidebar_surf = pygame.Surface(self.sidebar_size)
         self.botbar_surf = pygame.Surface(self.botbar_size)
         self.controls_surf = pygame.Surface(self.controls_size)
-        self.running = True
+
         bgcolor = self.theme['app_background'] 
+
         # Font Initialisation
         self.font_size = self.sidebar_size[1] // 25 
         self.font = pygame.font.SysFont('Calibri', self.font_size)
+
         # Create graph to be rendered in sidebar
         self.graph = Graph((self.sidebar_size[0], self.sim_size[1]//2), self.font, self.theme)
         self.graph.plot([[1,2,3,4,5], [5,4,3,2,1]])
         
+        self.running = True
         while self.running:
             
             self.sim_surf.fill(bgcolor) # Fill background            
@@ -320,6 +353,8 @@ class Simulation:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_q:
                         self.running = False
+                    if event.key == pygame.K_p: 
+                        self.__pause() 
 
             self.window.blit(self.sim_surf, (0, 0))
             self.window.blit(self.sidebar_surf, (self.sim_size[0], 0))
@@ -348,7 +383,7 @@ class Community():
             self.population.add(Person(self.surface_size, self.sim_vars, self.theme))
 
     def calculate_infected(self):
-        pass
+        pass        
 
 
     def update(self) -> None:
