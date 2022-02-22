@@ -14,8 +14,19 @@ theme = config['theme'][config['app']['theme']]
 class Pathogen:
 
     '''
-    Purpose: Class that contains methods for characteristics of pathogen spread.
+    Purpose: Class that contains methods for characteristics 
+    of pathogen spread.
     '''
+
+    _instance = None 
+    def __new__(cls, *args, **kwargs): 
+        '''
+        Used to ensure that pathogen is a Singleton, ie. only one 
+        instance of the class can be created
+        '''
+        if not cls._instance: 
+            cls._instance = object.__new__(cls, *args, **kwargs)
+        return cls._instance
 
     def __init__(self, catchment, infectiousness) -> None:
 
@@ -278,6 +289,18 @@ class Simulation:
     Args: 
         config: str path of config.json
     '''
+
+    _instance = None 
+    def __new__(cls, *args, **kwargs): 
+        '''
+        Used to ensure that simulation is a Singleton, ie. only one 
+        instance of the class can be created
+        '''
+        if not cls._instance: 
+            cls._instance = object.__new__(cls, *args, **kwargs)
+        return cls._instance
+
+
 
     def __init__(self) -> None:
 
