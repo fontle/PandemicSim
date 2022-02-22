@@ -162,7 +162,7 @@ class Graph:
 
     '''
 
-    def __init__(self, size: tuple[int, int], font:pygame.font.SysFont, lines, title = ''):
+    def __init__(self, size: tuple[int, int], font:pygame.font.SysFont, lines: int, title = ''):
 
         global theme 
 
