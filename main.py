@@ -18,19 +18,9 @@ class Pathogen:
     of pathogen spread.
     '''
 
-    _instance = None 
-    def __new__(cls, *args, **kwargs): 
-        '''
-        Used to ensure that pathogen is a Singleton, ie. only one 
-        instance of the class can be created
-        '''
-        if not cls._instance: 
-            cls._instance = object.__new__(cls, *args, **kwargs)
-        return cls._instance
-
     def __init__(self, catchment, infectiousness) -> None:
 
-        self.catchment = catchment # Radius Person has to be from other to get infected
+        self.catchment = catchment # Manhattan Distance Person has to be from other to get infected
         self.infectiousness = infectiousness # Chance person will get infected from other person
         self.lethality = 0.01 # Probabiliy will kill every cycle self.severity = 0.005 # The rate at which lethality changes every cycle
         self.curability = 0.002 # The chance of someone being cured from the disease every cycle
@@ -44,10 +34,9 @@ class Pathogen:
             susceptible: Person()
             infected: Person()
         '''
-        
+
         if susceptible.infected == True: 
             return
-
 
         sx, sy = susceptible.coords
         ix, iy = infected.coords
@@ -185,8 +174,13 @@ class Graph:
         # Format dimensions of frame
         self.width, self.height = size
         self.n_buff = self.height // 10
-        # South buffer must be large to accommodate for title
-        self.s_buff = self.height // 8
+
+        # Puts graph in line with simulation as uses same buff as community 
+        sim_size = config['app']['sim_size']    
+        sim_width, sim_height = sim_size
+        layout = sim_vars['community_layout']
+        self.s_buff = sim_height/(len(layout)*10)
+
         self.w_buff = 0 
         self.e_buff = self.width // 10
         # Create values to be plotted
@@ -272,7 +266,6 @@ class Graph:
                     (x_last, y_last),
                     (x_pos, y_pos),
                     width=2)
-                    
 
                 x_last, y_last = x_pos, y_pos
 
@@ -289,18 +282,6 @@ class Simulation:
     Args: 
         config: str path of config.json
     '''
-
-    _instance = None 
-    def __new__(cls, *args, **kwargs): 
-        '''
-        Used to ensure that simulation is a Singleton, ie. only one 
-        instance of the class can be created
-        '''
-        if not cls._instance: 
-            cls._instance = object.__new__(cls, *args, **kwargs)
-        return cls._instance
-
-
 
     def __init__(self) -> None:
 
