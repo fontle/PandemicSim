@@ -57,7 +57,6 @@ def normal_speed_symbol(surface: pygame.Surface):
     alpha_polygon(surface, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
     alpha_polygon(surface, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
 
-
 def fast_symbol(surface: pygame.Surface):
     '''
     Renders fast speed symbol on top left surface provided.

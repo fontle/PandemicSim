@@ -2,7 +2,7 @@
 # A simple pandemic simulation created in pygame.
 # Made for AQA A level Computer Science NEA 2021/22
 # pylint: disable=E1101 
-import pygame, json, random, time, math
+import pygame, json, random, time
 from dataclasses import dataclass
 pygame.font.init()
 
@@ -44,7 +44,7 @@ class Pathogen:
         if random.random() < self.infectiousness:
 
             if abs(sx - ix) <= self.catchment and abs(sy - iy) <= self.catchment:
-            
+                
                 susceptible.infect()
 
 
@@ -320,19 +320,6 @@ class Simulation:
 
         return communities
 
-    def migrate_person(self, person, origin, dest) -> None: 
-        '''
-        Moves person from origin to destination
-
-        Args:
-            person: Person object to be moved 
-            origin: Community object person belonged to 
-            dest: Communnity object person emigrates to
-        '''
-        origin.population.remove(person)
-        dest.population.add(person)
-    
-
 
     def __pause(self) -> None:
         '''
@@ -425,7 +412,24 @@ class Simulation:
 
             # Render the canvas of each community and update
             for community in self.communities:
-                community.update()
+                
+                # Perform migration event calculation and migrate people to new communities
+                persons_migrated = community.calculate_migrations()
+
+                for person in persons_migrated:
+                    new_community = random.choice([c for c in self.communities if c != community])
+                    community.population.remove(person)
+                    old_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
+                    person.set_random_location()
+                    new_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
+                    pygame.draw.line(self.sim_surf, (255,255,255), old_coords, new_coords,10) 
+                    new_community.population.add(person)
+    
+                community.calculate_infected()
+                community.surf.fill(theme['community_background'])
+                community.population.draw(community.surf)
+                community.population.update()
+
                 self.sim_surf.blit(community.surf, community.coords)
 
             for event in pygame.event.get():
@@ -448,6 +452,74 @@ class Simulation:
             # Update display
             pygame.display.update()
             time.sleep(0.02)
+
+
+class Person(pygame.sprite.Sprite):
+
+    def __init__(self, community_size) -> None:
+
+        global sim_vars, theme
+
+        # Initialise sprite to allow rendering
+        pygame.sprite.Sprite.__init__(self)
+
+        # Simulation variables
+        self.community_size = community_size
+
+        # Person size and surface to be rendered
+        self.size = (5,5)
+        self.image = pygame.Surface(self.size)
+        self.image.fill(theme['susceptible'])
+
+        # Person location
+        self.rect = self.image.get_rect()
+        self.set_random_location()
+        # Person behaviour variables
+        self.movement = 2
+        self.infected = False
+
+
+    def infect(self):
+        '''
+        Infects a person
+        '''
+        self.infected = True
+        self.image.fill(theme['infected'])
+        sim_vars['infected'] += 1
+        sim_vars['susceptible'] -= 1 
+
+    def set_random_location(self): 
+        '''
+        Move person to random location in commmunity
+        '''
+        self.rect.x = random.randint(1,self.community_size[0] - self.size[0])
+        self.rect.y = random.randint(1,self.community_size[1] - self.size[1])
+        self.coords = self.rect.x, self.rect.y 
+
+
+    def update(self):
+        '''
+        Controls movement of the person.
+        '''
+        new_x = eval(f'{self.rect.x}{random.choice(["+", "-"])}{self.movement}')
+        new_y = eval(f'{self.rect.y}{random.choice(["+", "-"])}{self.movement}')
+        max_x, max_y = self.community_size
+        width, height = self.size
+        valid_x, valid_y  = max_x - width, max_y - height
+        # If new x coord out of range
+        if new_x < 0:
+            new_x = 0
+        elif new_x > valid_x:
+            new_x = valid_x
+        # If new y coord out of range
+        if new_y < 0:
+            new_y = 0
+        elif new_y > valid_y:
+            new_y = valid_y
+        # Coordinates definitely in range
+        self.rect.x = new_x
+        self.rect.y = new_y
+        self.coords = self.rect.x, self.rect.y 
 
 
 class Community:
@@ -474,86 +546,36 @@ class Community:
 
 
     def calculate_infected(self):
+        '''
+        Infects (calls method from Pathogen) every person in proximity
+        to an infected person in the community
+        '''
 
         population_list = self.population.sprites()
         infected = [person for person in population_list if person.infected == True]
         susceptible = [person for person in population_list if person not in infected]
+
         # zombie refering to infected person 
         for zombie in infected: 
             for person in susceptible:
                 self.pathogen.infect(person, zombie)
 
-
-               
-
-    def update(self) -> None:
-
-        self.calculate_infected()
-        self.surf.fill(theme['community_background'])
-        self.population.draw(self.surf)
-        self.population.update()
-
-
-class Person(pygame.sprite.Sprite):
-
-    def __init__(self, community_size) -> None:
-
-        global sim_vars, theme
-
-        # Initialise sprite to allow rendering
-        pygame.sprite.Sprite.__init__(self)
-
-        # Simulation variables
-        self.community_size = community_size
-
-        # Person size and surface to be rendered
-        self.size = (5,5)
-        self.image = pygame.Surface(self.size)
-        self.image.fill(theme['susceptible'])
-
-        # Person location
-        self.rect = self.image.get_rect()
-        self.rect.x = random.randint(1,self.community_size[0] - self.size[0])
-        self.rect.y = random.randint(1,self.community_size[1] - self.size[1])
-        self.coords = self.rect.x, self.rect.y 
-
-        # Person behaviour variables
-        self.movement = 2
-        self.infected = False
-
-
-    def infect(self):
+    def calculate_migrations(self): 
         '''
-        Infects a person
+        Manages whether events such as migration occurs.
         '''
-        self.infected = True
-        self.image.fill(theme['infected'])
-        sim_vars['infected'] += 1
-        sim_vars['susceptible'] -= 1 
+        mig_chance = 0.15
+        
+        # If migration event occurs, ensure at least one person migrates
 
-    def update(self):
-        '''
-        Controls movement of the person.
-        '''
-        new_x = eval(f'{self.rect.x}{random.choice(["+", "-"])}{self.movement}')
-        new_y = eval(f'{self.rect.y}{random.choice(["+", "-"])}{self.movement}')
-        max_x, max_y = self.community_size
-        width, height = self.size
-        valid_x, valid_y  = max_x - width, max_y - height
-        # If new x coord out of range
-        if new_x < 0:
-            new_x = 0
-        elif new_x > valid_x:
-            new_x = valid_x
-        # If new y coord out of range
-        if new_y < 0:
-            new_y = 0
-        elif new_y > valid_y:
-            new_y = valid_y
-        # Coordinates definitely in range
-        self.rect.x = new_x
-        self.rect.y = new_y
-        self.coords = self.rect.x, self.rect.y 
+        if mig_chance < random.random():
+            yield random.choice(self.population.sprites())
+            # Subsequent people have less and less chance of migrating
+            while random.random() < mig_chance:
+                yield random.choice(self.population.sprites())
+        # If not migration occurs, return empty tuple 
+        else: 
+            return () 
 
     
 class Test:

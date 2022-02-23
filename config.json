@@ -22,8 +22,8 @@
     },
 
     "simulation" : {
-	"community_size" : 600, 
-	"community_layout" : [1],
+	"community_size" : 300, 
+	"community_layout" : [2],
 	"total_population" : 600, 
 	"vaccinated" : 0, 
 	"susceptible" : 599,
