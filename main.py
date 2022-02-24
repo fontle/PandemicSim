@@ -3,7 +3,9 @@
 # Made for AQA A level Computer Science NEA 2021/22
 # pylint: disable=E1101 
 import pygame, json, random, time
-from dataclasses import dataclass
+from dataclasses import dataclass
+
+from pygame.event import wait
 pygame.font.init()
 
 with open('config.json', 'r') as config_file:
@@ -412,24 +414,33 @@ class Simulation:
 
             # Render the canvas of each community and update
             for community in self.communities:
-                
+        
+                community.surf.fill(theme['community_background'])
+
                 # Perform migration event calculation and migrate people to new communities
                 persons_migrated = community.calculate_migrations()
-
                 for person in persons_migrated:
                     new_community = random.choice([c for c in self.communities if c != community])
                     community.population.remove(person)
-                    old_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
-                    person.set_random_location()
-                    new_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
-                    pygame.draw.line(self.sim_surf, (255,255,255), old_coords, new_coords,10) 
-                    new_community.population.add(person)
-    
-                community.calculate_infected()
-                community.surf.fill(theme['community_background'])
-                community.population.draw(community.surf)
-                community.population.update()
 
+                    old_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
+
+                    person.set_random_location()
+                    
+                    new_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
+                    print(old_coords)
+                    print(new_coords)
+
+                    pygame.draw.line(self.sim_surf, (255,255,0), old_coords, new_coords) 
+                    new_community.population.add(person)
+   
+                # Update the infected state of the population
+                community.calculate_infected()
+                # Update the population of the community (movement)
+                community.population.update()
+                # Render population to the community surface
+                community.population.draw(community.surf)
+                # Render community surface to main window
                 self.sim_surf.blit(community.surf, community.coords)
 
             for event in pygame.event.get():
@@ -451,7 +462,8 @@ class Simulation:
             self.window.blit(self.botbar_surf, (0, self.sim_size[1]))
             # Update display
             pygame.display.update()
-            time.sleep(0.02)
+            time.sleep(0.016) # 60 updates a second
+
 
 
 class Person(pygame.sprite.Sprite):
