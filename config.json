@@ -1,41 +1,48 @@
 {
-    "theme":{
-
-        "dark":{
-            "app_background" : [22, 31, 40],
-            "community_background" : [44, 62, 80],
-            "infected" : [255, 87, 34],
-            "immune" : [25, 118, 210],
-            "dead" : [144, 164, 174],
-            "susceptible" : [238, 238, 238],
-            "place" : [60, 60, 60]
+	"theme":{
+		"dark":{
+			"app_background" : [22, 31, 40],
+			"community_background" : [44, 62, 80],
+			"infected" : [255, 87, 34],
+			"immune" : [25, 118, 210],
+			"dead" : [144, 164, 174],
+			"susceptible" : [238, 238, 238],
+			"place" : [60, 60, 60]
             },
-        "light":{
-            "app_background" : [189, 195, 199],
-            "community_background" : [250, 250, 250],
-            "infected" : [255, 87, 34],
-            "immune" :  [25, 118, 210],
-            "dead" : [144, 164, 174],
-            "susceptible" : [238, 238, 238],
-            "place" : [60, 60, 60]
+		"light":{
+			"app_background" : [189, 195, 199],
+			"community_background" : [250, 250, 250],
+			"infected" : [255, 87, 34],
+			"immune" :  [25, 118, 210],
+			"dead" : [144, 164, 174],
+			"susceptible" : [238, 238, 238],
+			"place" : [60, 60, 60]
             }
-    },
 
-    "simulation" : {
-	"community_size" : 300, 
-	"community_layout" : [2],
-	"total_population" : 600, 
-	"vaccinated" : 0, 
-	"susceptible" : 599,
-	"infected" : 1
+    },
+	"simulation" : {
+		"community_size" : 600, 
+		"community_layout" : [1],
+		"place_lower_bound" : 1, 
+		"place_upper_bound" : 2,
+		"total_population" : 600, 
+		"dead" : 0, 
+		"vaccinated" : 0, 
+		"susceptible" : 600,
+		"infected" : 0
          
     },
-
-    "app" : {
-	"sim_size" : [600, 600], 
-	"sidebar_width" : 200,
-	"bar_height" : 200,
-        "theme" : "dark"
+	"app" : {
+		"sim_size" : [600, 600], 
+		"sidebar_width" : 200,
+		"bar_height" : 200,
+		"theme" : "dark"
         
-    }
+    },
+	"pathogen" : {
+		"catchment" : 10,  
+		"curability" : 0.002,
+		"infectiousness" : 0.25,
+		"lethality" : 0.01
+	}
 }

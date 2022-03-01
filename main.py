@@ -3,16 +3,12 @@
 # Made for AQA A level Computer Science NEA 2021/22
 # pylint: disable=E1101 
 import pygame, json, random, time
-from dataclasses import dataclass
-
+from dataclasses import dataclass
+
 from pygame.event import wait
 pygame.font.init()
 
-with open('config.json', 'r') as config_file:
-    config = json.loads(config_file.read())
 
-sim_vars = config['simulation'] 
-theme = config['theme'][config['app']['theme']]
 class Pathogen:
 
     '''
@@ -20,25 +16,23 @@ class Pathogen:
     of pathogen spread.
     '''
 
-    def __init__(self, catchment, infectiousness) -> None:
+    def __init__(self, catchment:float, curability:float, infectiousness:float, lethality:float ) -> None:
 
         self.catchment = catchment # Manhattan Distance Person has to be from other to get infected
         self.infectiousness = infectiousness # Chance person will get infected from other person
-        self.lethality = 0.01 # Probabiliy will kill every cycle self.severity = 0.005 # The rate at which lethality changes every cycle
-        self.curability = 0.002 # The chance of someone being cured from the disease every cycle
+        self.lethality = lethality # Probability will kill every cycle self.severity = 0.005 # The rate at which lethality changes every cycle
+        self.curability = curability # The chance of someone being cured from the disease every cycle
 
 
     def infect(self, susceptible, infected) -> None: 
         '''
         Purpose: Given two people who have been in contact;
         returns whether the infected person infects the other 'person'
+
         Arguments: 
             susceptible: Person()
             infected: Person()
         '''
-
-        if susceptible.infected == True: 
-            return
 
         sx, sy = susceptible.coords
         ix, iy = infected.coords
@@ -49,6 +43,26 @@ class Pathogen:
                 
                 susceptible.infect()
 
+
+    def update_health(self, person): 
+        '''
+        Calculates whether an infected person dies or is cured within a cycle.
+
+        Arguments:
+            person : Person()
+        '''
+
+        if random.random() < self.curability:
+            person.cure()
+            return 
+
+        else:
+            person.cure_chance += self.curability
+
+        if random.random() < self.lethality:
+            
+            person.kill()
+            
 
 @dataclass
 class Render:
@@ -164,9 +178,9 @@ class Graph:
 
     '''
 
-    def __init__(self, size: tuple[int, int], font:pygame.font.SysFont, lines: int, title = ''):
+    def __init__(self, size: tuple[int, int], font:pygame.font.SysFont, title = ''):
 
-        global theme 
+        global sim_vars, theme, pathogen 
 
         # Initialise vars
         self.surf = pygame.Surface((size))
@@ -186,44 +200,25 @@ class Graph:
         self.w_buff = 0 
         self.e_buff = self.width // 10
         # Create values to be plotted
-        
-        self.values = [[] for _ in range(lines)]
+        self.values = {
+            tuple(theme['infected']) : [sim_vars['infected']],
+            tuple(theme['susceptible']) : [sim_vars['susceptible']],
+            tuple(theme['dead']) : [sim_vars['dead']]
+        }
 
-
-    def plot(self, value) -> None:
+    def plot(self) -> None:
         '''
         Add values to be plotted to the graph; the value parameter is a multi-dimensional
         array corresponding to the number of lines on the graph. 
-
-        Must have a value for every line, if no new value added to a line, specify with [].
-
-        Args: 
-            value: list[list, ...]  
         '''
+        self.values[tuple(theme['infected'])].append(sim_vars['infected'])
+        self.values[tuple(theme['susceptible'])].append(sim_vars['susceptible'])
+        self.values[tuple(theme['dead'])].append(sim_vars['dead'])
 
-        for i in range(len(self.values)): 
-            self.values[i] += [value[i]]
+        
+    def __draw_axis(self):
 
-    def draw(self, *, maximum = 0) -> None:
-        '''
-        Draws graph and its values onto surface.
-
-        Args:
-            maximum: integer, sets the maximum value of the y-axis (optional)
-        '''
-
-        global theme 
-
-        self.surf.fill(theme['app_background'])
-        self.surf.blit(self.title, (self.w_buff, self.height-self.s_buff))
-
-        # Set maximum value of y-scale
-        if maximum == 0:
-            # If maximum value not provided then set the highest value in plots as y_max
-            self.y_max = max([max(val) for val in self.values if len(val) > 0])
-
-        else: # Max value provided
-            self.y_max = maximum
+        self.y_max = sim_vars['total_population']
 
         # Render vertical axis on surface
         self.y_axis = pygame.draw.line(
@@ -245,18 +240,21 @@ class Graph:
             width=2)
 
         # The maximum x value of both lines
-        self.x_max = max([len(line) for line in self.values])
+        self.x_max = max([len(line) for line in self.values.values()])
         # The number of pixels rendered between each item in the list 
         self.x_scale = (self.width-self.e_buff-self.w_buff)/self.x_max
 
+
+    def __draw_plots(self):
+
         # Plot points for each line
-        for line in self.values:
+        for (line_colour, line_values) in self.values.items():
 
             x_last = round(self.w_buff + (self.x_scale / 2))
-            y_last = round((self.height - self.s_buff) - (self.y_scale * line[0]))
+            y_last = round((self.height - self.s_buff) - (self.y_scale * line_values[0]))
             
             # Draw every plot for specified line
-            for point_count, point in enumerate(line):
+            for point_count, point in enumerate(line_values):
 
                 x_pos = round(self.w_buff + (self.x_scale * point_count) + (self.x_scale / 2))
                 y_pos = round((self.height - self.s_buff) - (self.y_scale * point))
@@ -264,7 +262,7 @@ class Graph:
                 # Draws line between current and last position
                 pygame.draw.line(
                     self.surf,
-                    theme['infected'],
+                    line_colour, 
                     (x_last, y_last),
                     (x_pos, y_pos),
                     width=2)
@@ -273,8 +271,25 @@ class Graph:
 
         # Memory management for number of items in values
         if self.x_scale <= 1: 
-            for line in self.values: 
+            for line in self.values.values(): 
                 del line[::60]
+
+
+    def draw(self) -> None:
+        '''
+        Draws graph and its values onto surface.
+
+        Args:
+            maximum: integer, sets the maximum value of the y-axis (optional)
+        '''
+
+        global theme 
+
+        self.surf.fill(theme['app_background'])
+        self.surf.blit(self.title, (self.w_buff, self.height-self.s_buff))
+
+        self.__draw_axis()
+        self.__draw_plots()
 
 
 class Simulation:
@@ -287,13 +302,12 @@ class Simulation:
 
     def __init__(self) -> None:
 
-        global sim_vars, theme
+        global sim_vars, theme, pathogen
 
         self.sim_size = (config['app']['sim_size'])
         self.sidebar_size = (config['app']['sidebar_width'], self.sim_size[1])
         self.botbar_size = (self.sim_size[0], config['app']['bar_height'])
         self.controls_size = (config['app']['sidebar_width'], config['app']['bar_height'])
-        self.pathogen = Pathogen(5, 1)
         self.communities = self.__calculate_communities()
 
 
@@ -318,7 +332,7 @@ class Simulation:
             for x in range(cols): # x counts how many columns in
                 # Round do prevent float error when dividing
                 coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+self.y_buffer)+self.y_buffer)
-                communities.append(Community(coords, (width, height), self.pathogen))
+                communities.append(Community(coords, (width, height)))
 
         return communities
 
@@ -332,6 +346,7 @@ class Simulation:
 
             # Render Pause bars
             self.render.pause_symbol(self.window)
+
             # Event handling for pause menu
             for event in pygame.event.get():
 
@@ -360,17 +375,22 @@ class Simulation:
         '''
         infected_label = self.font.render(f'Infected:{sim_vars["infected"]}', True, theme['infected'])
         susceptible_label = self.font.render(f'Susceptible:{sim_vars["susceptible"]}', True, theme['susceptible'])
+        dead_label = self.font.render(f'Dead:{sim_vars["dead"]}', True, theme['dead'])
+        total_label = self.font.render(f'Total: {sim_vars["dead"]+sim_vars["infected"]+sim_vars["susceptible"]}', True, theme['immune'])
 
         self.sidebar_surf.blit(susceptible_label, (0, self.y_buffer))
         self.sidebar_surf.blit(infected_label, (0, self.y_buffer + self.font_size * 1.25))
+        self.sidebar_surf.blit(dead_label, (0,  self.y_buffer + self.font_size * 2.5))
+        self.sidebar_surf.blit(total_label, (0,  self.y_buffer + self.font_size * 3.75))
 
 
     def __render_graph(self) -> None:
         '''
         Controls the rendering and updating of the graph object in sidebar. 
         '''
-        self.graph.plot([sim_vars['infected'], sim_vars['susceptible']])
-        self.graph.draw(maximum=sim_vars['total_population'])
+
+        self.graph.plot()
+        self.graph.draw()
         self.sidebar_surf.blit(self.graph.surf, (0, self.sim_size[1]//2))
 
 
@@ -396,7 +416,7 @@ class Simulation:
         self.font = pygame.font.SysFont('Calibri', self.font_size)
 
         # Create graph to be rendered in sidebar
-        self.graph = Graph((self.sidebar_size[0], self.sim_size[1]//2), self.font, 2)
+        self.graph = Graph((self.sidebar_size[0], self.sim_size[1]//2), self.font)
 
         bgcolor = theme['app_background']
         self.running = True
@@ -412,37 +432,32 @@ class Simulation:
             self.__render_sidebar()
             self.__render_graph()
 
-            # Render the canvas of each community and update
+            # Update community and render 
             for community in self.communities:
-        
-                community.surf.fill(theme['community_background'])
 
+                community.surf.fill(theme['community_background'])
+                # Update the population of the community (state and movement)
+                community.update()
                 # Perform migration event calculation and migrate people to new communities
                 persons_migrated = community.calculate_migrations()
-                for person in persons_migrated:
-                    new_community = random.choice([c for c in self.communities if c != community])
-                    community.population.remove(person)
 
-                    old_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
+                # If there is only one community, do not go through with migration process
+                valid = [x for x in self.communities if x is not community]
+                if len(valid) > 1:
 
-                    person.set_random_location()
-                    
-                    new_coords = [a + b for (a, b) in zip(person.coords, community.coords)]
-                    print(old_coords)
-                    print(new_coords)
-
-                    pygame.draw.line(self.sim_surf, (255,255,0), old_coords, new_coords) 
-                    new_community.population.add(person)
-   
-                # Update the infected state of the population
-                community.calculate_infected()
-                # Update the population of the community (movement)
-                community.population.update()
+                    for person in persons_migrated:
+                        # Migration can occur within a community (ie. Go-to someones house, or cross communities)
+                        new_community = random.choice(valid)
+                        community.population.remove(person)
+                        person.set_random_location()
+                        new_community.population.add(person)
+                        
                 # Render population to the community surface
                 community.population.draw(community.surf)
                 # Render community surface to main window
                 self.sim_surf.blit(community.surf, community.coords)
 
+            # Event handler
             for event in pygame.event.get():
 
                 # User closed window -> quit application
@@ -486,19 +501,73 @@ class Person(pygame.sprite.Sprite):
         # Person location
         self.rect = self.image.get_rect()
         self.set_random_location()
+
         # Person behaviour variables
         self.movement = 2
+        self.dead = False
+        self.immune = False
         self.infected = False
+        self.cure_chance = 0 
+        self.despawn_time = 300 # Equivalent to 5s at 60hz
 
+        # Route behaviour
+        self.destination = None
+    
+        
+    def kill(self):
+        '''
+        Kills the person from the Simulation
+        '''
+
+        # Guard checks to ensure person in killable
+        if self.dead == True:
+            return
+        if self.infected == False:
+            return
+            
+        # Update person vars
+        self.dead = True 
+        self.infected = False 
+        self.cure_chance = 0
+        self.immune = False
+        self.image.fill(theme['dead'])
+
+        # Update sim_vars
+        sim_vars['dead'] += 1 
+        sim_vars['infected'] -= 1
+    
 
     def infect(self):
         '''
-        Infects a person
+        Infects a person.
         '''
+        # Guard checks to ensure person is infectable 
+        if self.dead == True:
+            return 
+        if self.immune == True:
+            return
+
         self.infected = True
         self.image.fill(theme['infected'])
         sim_vars['infected'] += 1
         sim_vars['susceptible'] -= 1 
+
+
+    def cure(self):
+        '''
+        Cures a person.
+        '''
+        # Guard checks to ensure person is curable
+        if self.dead == True:
+            return
+        if self.infected == False:
+            return
+        
+        self.infected = False
+        self.image.fill(theme['susceptible'])
+        sim_vars['infected'] -= 1 
+        sim_vars['susceptible'] += 1
+
 
     def set_random_location(self): 
         '''
@@ -509,29 +578,45 @@ class Person(pygame.sprite.Sprite):
         self.coords = self.rect.x, self.rect.y 
 
 
-    def update(self):
+    def update(self) -> bool:
         '''
         Controls movement of the person.
+
+        Returns -> boolean flag of whether to despawn person
         '''
+
+        # Dead people can do anything so return
+        if self.dead == True: 
+            if self.despawn_time == 0:
+                return True
+            else:
+                self.despawn_time -= 1
+                return False
+
         new_x = eval(f'{self.rect.x}{random.choice(["+", "-"])}{self.movement}')
         new_y = eval(f'{self.rect.y}{random.choice(["+", "-"])}{self.movement}')
         max_x, max_y = self.community_size
         width, height = self.size
         valid_x, valid_y  = max_x - width, max_y - height
+
         # If new x coord out of range
         if new_x < 0:
             new_x = 0
         elif new_x > valid_x:
             new_x = valid_x
+
         # If new y coord out of range
         if new_y < 0:
             new_y = 0
         elif new_y > valid_y:
             new_y = valid_y
+
         # Coordinates definitely in range
         self.rect.x = new_x
         self.rect.y = new_y
         self.coords = self.rect.x, self.rect.y 
+
+        return False
 
 
 class Community:
@@ -539,38 +624,57 @@ class Community:
     Is a pygame frame that sits encapsulated within simulation
     '''
 
-    def __init__(self, coords, surf_size, pathogen) -> None:
+    def __init__(self, coords, surf_size) -> None:
 
-        global sim_vars, theme
+        global sim_vars, theme, pathogen
 
         self.coords = coords
         self.surf_size = surf_size
         self.surf = pygame.Surface(self.surf_size)
         
-        self.pathogen = pathogen
+
         # Create list of people in the community
         self.population = pygame.sprite.Group()
-        self.infected = []
-        self.susceptible = []
-
+        
         for _ in range(sim_vars['community_size']):
             self.population.add(Person(self.surf_size))
 
 
-    def calculate_infected(self):
+    def update(self):
         '''
-        Infects (calls method from Pathogen) every person in proximity
-        to an infected person in the community
+        Updates the state (dead, immune, susceptible, or infected)
+        of people within the community. 
         '''
 
         population_list = self.population.sprites()
-        infected = [person for person in population_list if person.infected == True]
-        susceptible = [person for person in population_list if person not in infected]
+        susceptible = [] 
+        infected = []
+        dead = []
+        immune = []
 
+        for person in population_list:
+
+            despawn = person.update() 
+
+            if person.dead == True:
+                
+                dead.append(person)
+
+                if despawn == True:
+                    self.population.remove(person)
+
+            elif person.infected == True:
+                infected.append(person)
+            else:
+                susceptible.append(person)
         # zombie refering to infected person 
         for zombie in infected: 
-            for person in susceptible:
-                self.pathogen.infect(person, zombie)
+            
+           for person in susceptible:
+                pathogen.infect(person, zombie)
+
+           pathogen.update_health(zombie)
+
 
     def calculate_migrations(self): 
         '''
@@ -578,17 +682,16 @@ class Community:
         '''
         mig_chance = 0.15
         
-        # If migration event occurs, ensure at least one person migrates
+        # Valid migrants are not dead 
+        valid = [person for person in self.population.sprites() if person.dead == False] 
 
-        if mig_chance < random.random():
-            yield random.choice(self.population.sprites())
-            # Subsequent people have less and less chance of migrating
-            while random.random() < mig_chance:
-                yield random.choice(self.population.sprites())
-        # If not migration occurs, return empty tuple 
-        else: 
-            return () 
+        migrants = []
+        while (random.random() < mig_chance) and len(valid) > 0:
+            migrant = random.choice(valid)
+            migrants.append(migrant)
 
+        return migrants 
+            
     
 class Test:
     
@@ -600,9 +703,24 @@ class Test:
             simulation.communities[0].population.sprites()[0].infect()
             simulation.run()
 
+
 if __name__ == '__main__':
     import cProfile
     import pstats
+
+    with open('config.json', 'r') as config_file:
+        config = json.loads(config_file.read())
+
+    sim_vars = config['simulation'] 
+    theme = config['theme'][config['app']['theme']]
+
+    vars = config['pathogen']
+
+    pathogen = Pathogen(
+        vars['catchment'],
+        vars['curability'],
+        vars['infectiousness'],
+        vars['lethality'])
 
     with cProfile.Profile() as pr:
         Test.Simulation().run()
@@ -610,4 +728,3 @@ if __name__ == '__main__':
     stats = pstats.Stats(pr)
     stats.sort_stats(pstats.SortKey.TIME)
     stats.print_stats()
-
