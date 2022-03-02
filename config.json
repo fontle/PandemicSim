@@ -7,7 +7,7 @@
 			"immune" : [25, 118, 210],
 			"dead" : [144, 164, 174],
 			"susceptible" : [238, 238, 238],
-			"place" : [60, 60, 60]
+			"place" : [200, 180, 200]
             },
 		"light":{
 			"app_background" : [189, 195, 199],
@@ -21,8 +21,8 @@
 
     },
 	"simulation" : {
-		"community_size" : 600, 
-		"community_layout" : [1],
+		"community_size" : 300, 
+		"community_layout" : [2],
 		"place_lower_bound" : 1, 
 		"place_upper_bound" : 2,
 		"total_population" : 600, 
@@ -30,7 +30,8 @@
 		"vaccinated" : 0, 
 		"susceptible" : 600,
 		"infected" : 0
-         
+
+
     },
 	"app" : {
 		"sim_size" : [600, 600], 
@@ -43,6 +44,6 @@
 		"catchment" : 10,  
 		"curability" : 0.002,
 		"infectiousness" : 0.25,
-		"lethality" : 0.01
+		"lethality" : 0.001
 	}
 }

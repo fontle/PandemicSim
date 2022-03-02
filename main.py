@@ -2,10 +2,8 @@
 # A simple pandemic simulation created in pygame.
 # Made for AQA A level Computer Science NEA 2021/22
 # pylint: disable=E1101 
-import pygame, json, random, time
+import pygame, json, random, time, math
 from dataclasses import dataclass
-
-from pygame.event import wait
 pygame.font.init()
 
 
@@ -18,10 +16,14 @@ class Pathogen:
 
     def __init__(self, catchment:float, curability:float, infectiousness:float, lethality:float ) -> None:
 
-        self.catchment = catchment # Manhattan Distance Person has to be from other to get infected
-        self.infectiousness = infectiousness # Chance person will get infected from other person
-        self.lethality = lethality # Probability will kill every cycle self.severity = 0.005 # The rate at which lethality changes every cycle
-        self.curability = curability # The chance of someone being cured from the disease every cycle
+        # Manhattan Distance Person has to be from other to get infected
+        self.catchment = catchment 
+        # Chance person will get infected from other person
+        self.infectiousness = infectiousness 
+        # The probability infected would die every cycle
+        self.lethality = lethality 
+        # The rate at which the probability of someone being cured from the disease increases every cycle
+        self.curability = curability 
 
 
     def infect(self, susceptible, infected) -> None: 
@@ -308,10 +310,10 @@ class Simulation:
         self.sidebar_size = (config['app']['sidebar_width'], self.sim_size[1])
         self.botbar_size = (self.sim_size[0], config['app']['bar_height'])
         self.controls_size = (config['app']['sidebar_width'], config['app']['bar_height'])
-        self.communities = self.__calculate_communities()
+        self.communities = self.__calc_communities()
 
 
-    def __calculate_communities(self) -> list:
+    def __calc_communities(self) -> list:
         '''
         Initialises communities according to config file. 
 
@@ -436,14 +438,18 @@ class Simulation:
             for community in self.communities:
 
                 community.surf.fill(theme['community_background'])
+
                 # Update the population of the community (state and movement)
                 community.update()
+
+                # Calculate movements and routing to places
+                community.calc_movement_events()
                 # Perform migration event calculation and migrate people to new communities
-                persons_migrated = community.calculate_migrations()
+                persons_migrated = community.calc_migration_events()
 
                 # If there is only one community, do not go through with migration process
                 valid = [x for x in self.communities if x is not community]
-                if len(valid) > 1:
+                if len(valid) > 0:
 
                     for person in persons_migrated:
                         # Migration can occur within a community (ie. Go-to someones house, or cross communities)
@@ -451,7 +457,9 @@ class Simulation:
                         community.population.remove(person)
                         person.set_random_location()
                         new_community.population.add(person)
-                        
+
+                # Render places to surface
+                community.places.draw(community.surf)    
                 # Render population to the community surface
                 community.population.draw(community.surf)
                 # Render community surface to main window
@@ -511,8 +519,8 @@ class Person(pygame.sprite.Sprite):
         self.despawn_time = 300 # Equivalent to 5s at 60hz
 
         # Route behaviour
-        self.destination = None
-    
+        self.dest = None
+        
         
     def kill(self):
         '''
@@ -569,13 +577,39 @@ class Person(pygame.sprite.Sprite):
         sim_vars['susceptible'] += 1
 
 
-    def set_random_location(self): 
+    def set_random_location(self) -> None: 
         '''
         Move person to random location in commmunity
         '''
         self.rect.x = random.randint(1,self.community_size[0] - self.size[0])
         self.rect.y = random.randint(1,self.community_size[1] - self.size[1])
         self.coords = self.rect.x, self.rect.y 
+
+
+    def route(self, dest: tuple[int,int], set_home: bool) -> None:
+        
+        # Set a home which can be returned to
+        if set_home == True:
+            self.home = self.coords
+
+        self.dest = dest
+
+        x1, y1 = self.coords 
+        x2, y2 = self.dest
+
+        i, j = x2 - x1, y2 - y1
+
+        magnitude = math.sqrt(i**2 + j**2)
+
+        try:
+            # Vector on which person should move to the destination
+            self.vector = (i*self.movement)/magnitude, (j*self.movement)/magnitude
+        # Occurs when magnitude is so small float rounds to zero
+        # This means person already next to the destination, so do not create route
+        except ZeroDivisionError:
+            self.dest = None
+            
+
 
 
     def update(self) -> bool:
@@ -593,30 +627,85 @@ class Person(pygame.sprite.Sprite):
                 self.despawn_time -= 1
                 return False
 
-        new_x = eval(f'{self.rect.x}{random.choice(["+", "-"])}{self.movement}')
-        new_y = eval(f'{self.rect.y}{random.choice(["+", "-"])}{self.movement}')
-        max_x, max_y = self.community_size
-        width, height = self.size
-        valid_x, valid_y  = max_x - width, max_y - height
+        x,y = self.coords
+        
+        if self.dest == None:
 
-        # If new x coord out of range
-        if new_x < 0:
-            new_x = 0
-        elif new_x > valid_x:
-            new_x = valid_x
 
-        # If new y coord out of range
-        if new_y < 0:
-            new_y = 0
-        elif new_y > valid_y:
-            new_y = valid_y
+            # New coordinates
+            nx = eval(f'{x}{random.choice(["+", "-"])}{self.movement}') 
+            ny = eval(f'{y}{random.choice(["+", "-"])}{self.movement}')
+            # Boundaries of community
+            mx, my = self.community_size
+            # Valid coordinates are the boundaries accounted for size of person
+            w, h = self.size
+            vx, vy  = mx - w, my - h
 
-        # Coordinates definitely in range
-        self.rect.x = new_x
-        self.rect.y = new_y
-        self.coords = self.rect.x, self.rect.y 
+            # If new x coord out of range
+            if nx < 0:
+                nx = 0
+            elif nx > vx:
+                nx = vx
+
+            # If new y coord out of range
+            if ny < 0:
+                ny = 0
+            elif ny > vy:
+                ny = vy
+
+        else:
+
+            # Person arrived at destination
+           
+            dx, dy = self.dest # Destination coords
+
+            if abs(dx - x) < 10 and abs(dy - y) < 10:
+
+                # If home doesnt exist and person at destination 
+                # then person has returned home
+                try: 
+                    self.route(self.home, False)
+                    del self.home
+
+                except AttributeError:
+                    self.dest = None
+
+                nx, ny = self.coords
+
+            # Add vector to coords
+            else:
+                x, y = self.coords 
+                i, j = self.vector
+                nx = x + i 
+                ny = y + j
+
+        # Update position of rect on surface 
+        self.rect.x = round(nx) 
+        self.rect.y = round(ny)
+        self.coords = nx, ny 
 
         return False
+
+
+class Place(pygame.sprite.Sprite):
+
+    def __init__(self, community_size):
+
+        global sim_vars, theme 
+
+        pygame.sprite.Sprite.__init__(self)
+
+        self.size = (15, 15)
+        self.image = pygame.Surface(self.size)
+        self.image.fill(theme['place'])
+        self.rect = self.image.get_rect()
+
+        self.rect.x = random.randint(1,community_size[0] - self.size[0])
+        self.rect.y = random.randint(1,community_size[1] - self.size[1])
+        self.coords = (self.rect.x, self.rect.y)
+
+
+
 
 
 class Community:
@@ -631,14 +720,18 @@ class Community:
         self.coords = coords
         self.surf_size = surf_size
         self.surf = pygame.Surface(self.surf_size)
-        
 
         # Create list of people in the community
         self.population = pygame.sprite.Group()
-        
         for _ in range(sim_vars['community_size']):
             self.population.add(Person(self.surf_size))
 
+        # Create places in community 
+        num_places = random.randint(sim_vars['place_lower_bound'], sim_vars['place_upper_bound'])
+        self.places = pygame.sprite.Group()
+
+        for place in range(num_places):
+            self.places.add(Place(self.surf_size))
 
     def update(self):
         '''
@@ -655,16 +748,16 @@ class Community:
         for person in population_list:
 
             despawn = person.update() 
-
+            
             if person.dead == True:
-                
-                dead.append(person)
 
+                dead.append(person)
                 if despawn == True:
                     self.population.remove(person)
 
             elif person.infected == True:
                 infected.append(person)
+
             else:
                 susceptible.append(person)
         # zombie refering to infected person 
@@ -675,15 +768,37 @@ class Community:
 
            pathogen.update_health(zombie)
 
+    
+    def calc_movement_events(self):
+        '''
+        Manages whether a person heads to a place in a community
+        '''
+        move_chance = 0.05
+        
+        def check(person):
+            if person.dead == False and person.dest == None: 
+                return True
 
-    def calculate_migrations(self): 
+        valid = list(filter(check, self.population.sprites()))
+
+        while (random.random() < move_chance) and len(valid) > 0:
+            mover = random.choice(valid)
+            mover.route(random.choice(self.places.sprites()).coords, True)
+            valid.remove(mover)
+
+
+    def calc_migration_events(self): 
         '''
-        Manages whether events such as migration occurs.
+        Manages whether migrations occur.
         '''
+
         mig_chance = 0.15
         
-        # Valid migrants are not dead 
-        valid = [person for person in self.population.sprites() if person.dead == False] 
+        def check(person):
+            if person.dead == False and person.dest == None: 
+                return True
+
+        valid = list(filter(check, self.population.sprites()))
 
         migrants = []
         while (random.random() < mig_chance) and len(valid) > 0:
@@ -705,6 +820,7 @@ class Test:
 
 
 if __name__ == '__main__':
+
     import cProfile
     import pstats
 
@@ -727,4 +843,4 @@ if __name__ == '__main__':
 
     stats = pstats.Stats(pr)
     stats.sort_stats(pstats.SortKey.TIME)
-    stats.print_stats()
+    #stats.print_stats()
