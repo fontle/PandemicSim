@@ -55,7 +55,7 @@ class Pathogen:
         '''
 
         if random.random() < self.curability:
-            person.cure()
+            person.cure(True)
             return 
 
         else:
@@ -375,15 +375,20 @@ class Simulation:
         '''
         Controls the rendering of the sidebar in pygame window.
         '''
+
+        r = round(1 + (sim_vars['susceptible'] - sim_vars['infected']) / sim_vars['old_infected'], 2)
+
         infected_label = self.font.render(f'Infected:{sim_vars["infected"]}', True, theme['infected'])
         susceptible_label = self.font.render(f'Susceptible:{sim_vars["susceptible"]}', True, theme['susceptible'])
         dead_label = self.font.render(f'Dead:{sim_vars["dead"]}', True, theme['dead'])
-        total_label = self.font.render(f'Total: {sim_vars["dead"]+sim_vars["infected"]+sim_vars["susceptible"]}', True, theme['immune'])
+        r_label = self.font.render(f'R:{r}', True, theme['immune'])
+
+        sim_vars['old_infected'] = sim_vars['infected']
 
         self.sidebar_surf.blit(susceptible_label, (0, self.y_buffer))
         self.sidebar_surf.blit(infected_label, (0, self.y_buffer + self.font_size * 1.25))
         self.sidebar_surf.blit(dead_label, (0,  self.y_buffer + self.font_size * 2.5))
-        self.sidebar_surf.blit(total_label, (0,  self.y_buffer + self.font_size * 3.75))
+        self.sidebar_surf.blit(r_label, (0,  self.y_buffer + self.font_size * 3.75))
 
 
     def __render_graph(self) -> None:
@@ -557,11 +562,12 @@ class Person(pygame.sprite.Sprite):
 
         self.infected = True
         self.image.fill(theme['infected'])
+
         sim_vars['infected'] += 1
         sim_vars['susceptible'] -= 1 
 
 
-    def cure(self):
+    def cure(self, immune = False):
         '''
         Cures a person.
         '''
@@ -571,8 +577,15 @@ class Person(pygame.sprite.Sprite):
         if self.infected == False:
             return
         
+        # Update person state
         self.infected = False
-        self.image.fill(theme['susceptible'])
+        if immune:
+            self.immune = True
+            self.image.fill(theme['immune'])
+        else:
+            self.image.fill(theme['susceptible'])
+
+        # Adjust global counters
         sim_vars['infected'] -= 1 
         sim_vars['susceptible'] += 1
 

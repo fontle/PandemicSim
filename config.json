@@ -29,7 +29,8 @@
 		"dead" : 0, 
 		"vaccinated" : 0, 
 		"susceptible" : 600,
-		"infected" : 0
+		"infected" : 0,
+		"old_infected" : 1 
 
 
     },
@@ -41,7 +42,7 @@
         
     },
 	"pathogen" : {
-		"catchment" : 10,  
+		"catchment" : 20,  
 		"curability" : 0.002,
 		"infectiousness" : 0.25,
 		"lethality" : 0.001
