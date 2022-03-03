@@ -3,6 +3,13 @@
 # Made for AQA A level Computer Science NEA 2021/22
 # pylint: disable=E1101 
 import pygame, json, random, time, math
+
+# Imports for menu screen 
+import tkinter as tk 
+from tkinter import ttk 
+import tkinter.messagebox as messagebox
+
+# Imports from constructorless classes
 from dataclasses import dataclass
 pygame.font.init()
 
@@ -272,11 +279,6 @@ class Graph:
 
                 x_last, y_last = x_pos, y_pos
 
-        # Memory management for number of items in values
-        if self.x_scale <= 1: 
-            for line in self.values.values(): 
-                del line[::60]
-
 
     def draw(self) -> None:
         '''
@@ -381,7 +383,7 @@ class Simulation:
                     self.running = False
 
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
+                    if event.key == pygame.K_ESCAPE:
                         self.running = False
                         paused = False 
                     if event.key == pygame.K_p:
@@ -427,11 +429,12 @@ class Simulation:
         self.sidebar_surf.blit(self.graph.surf, (0, self.sim_size[1]//2))
 
 
-    def run(self) -> None:
+    def mainloop(self) -> None:
         '''
         Instantiates pygame window and starts the simulation. 
         '''
 
+        self.communities[0].population.sprites()[0].infect()
         bgcolor = theme['app_background']
         self.running = True
         while self.running:
@@ -486,7 +489,7 @@ class Simulation:
                 # User pressed key -> perform related event
                 if event.type == pygame.KEYDOWN:
 
-                    if event.key == pygame.K_q:
+                    if event.key == pygame.K_ESCAPE:
                         self.running = False
                     if event.key == pygame.K_p:
                         self.__pause()
@@ -748,9 +751,6 @@ class Place(pygame.sprite.Sprite):
         self.coords = (self.rect.x + self.size[0]/2, self.rect.y + self.size[1]/2)
 
 
-
-
-
 class Community:
     '''
     Is a pygame frame that sits encapsulated within simulation
@@ -821,8 +821,11 @@ class Community:
         '''
         Manages whether a person heads to a place in a community
         '''
-        move_chance = 0.05
-        
+        if len(self.places) == 0: 
+            return 
+
+        move_chance = sim_vars['move_chance']
+
         def check(person):
             if person.dead == False and person.dest == None: 
                 return True
@@ -840,7 +843,7 @@ class Community:
         Manages whether migrations occur.
         '''
 
-        mig_chance = 0.15
+        mig_chance = sim_vars['migration_chance'] 
         
         def check(person):
             if person.dead == False and person.dest == None: 
@@ -854,24 +857,151 @@ class Community:
             migrants.append(migrant)
 
         return migrants 
+
+
+class Menu(tk.Tk):
+
+    def __init__(self, config_addr = 'config.json'):
+        super().__init__()
+
+        self.title = 'Pandemic Simulation Configuration'
+
+        self.config_addr = config_addr
+        with open(self.config_addr, 'r') as config_file: 
+            self.config = json.loads(config_file.read())
             
-    
-class Test:
-    
-    class Simulation:
+        self.theme = self.config['theme'][self.config['app']['theme']]
+        self.sim_vars = self.config['simulation']
+        self.app_vars = self.config['app']
+        self.path_vars = self.config['pathogen']
 
-        def run(self):
-            # Tests __init__ of simulation class
-            simulation = Simulation()
-            simulation.communities[0].population.sprites()[0].infect()
-            simulation.run()
+        self.geometry = f'{self.app_vars["sim_size"][0]}x{self.app_vars["sim_size"][1]}'
 
 
-if __name__ == '__main__':
+        # Simulation theme chooser
+        self.theme_frame = ttk.LabelFrame(self, text='Simulation Theme')
+        self.theme_frame.pack(padx = 10, pady=10)
+        self.theme_var = tk.StringVar()
+        self.theme_var.set("dark")
+        
+        for col, theme in enumerate(['Light', 'Dark']):
+            
+            button = ttk.Radiobutton(self.theme_frame, text=theme, value=theme.lower(), variable=self.theme_var)
+            button.grid(column=col, row=0, padx=5)
+
+
+        self.pathogen_frame = ttk.LabelFrame(self, text = 'Pathogen') 
+        self.pathogen_frame.pack(padx = 5, pady = 5)
+
+
+        # Lethality of pathogen chooser
+        self.lethality_frame = ttk.LabelFrame(self.pathogen_frame, text='Lethality')
+        self.lethality_frame.grid(row = 0, column = 0, padx = 5, pady = 5)
+        self.lethality_var = tk.StringVar()
+        self.lethality_values = {'Low': 0.00001, 'Medium': 0.001, 'High': 0.05}
+        
+        self.lethality_var.set(self.lethality_values['Medium'])
+
+        for col, val in enumerate(self.lethality_values.keys()):
+            
+            button = ttk.Radiobutton(self.lethality_frame, 
+                text=val, 
+                value=self.lethality_values[val], 
+                variable=self.lethality_var)
+            button.grid(column=col, row=0, padx=5)
+
+
+        # Curability of pathogen chooser
+        self.curability_frame = ttk.LabelFrame(self.pathogen_frame, text='Curability')
+        self.curability_frame.grid(row = 1, column = 0, padx = 5, pady = 5)
+        self.curability_var = tk.StringVar()
+        self.curability_values = {'Low': 0.00001, 'Medium': 0.001, 'High': 0.05}
+        self.curability_var.set(self.curability_values['Medium'])
+        
+        for col, val in enumerate(self.curability_values.keys()):
+            
+            button = ttk.Radiobutton(self.curability_frame, 
+                text=val, 
+                value=self.curability_values[val], 
+                variable=self.curability_var)
+            button.grid(column=col, row=0, padx=5)
+
+
+        # Catchment area of pathogen chooser 
+        self.catchment_frame = ttk.LabelFrame(self.pathogen_frame, text='Catchment')
+        self.catchment_frame.grid(row = 2, column = 0, padx = 5, pady = 5)
+        self.catchment_var = tk.StringVar()
+        self.catchment_values = {'Low': 1, 'Medium': 5, 'High': 10}
+        self.catchment_var.set(self.catchment_values['Medium'])
+
+        for col, val in enumerate(self.catchment_values.keys()):
+            
+            button = ttk.Radiobutton(self.catchment_frame, 
+                text=val, 
+                value=self.catchment_values[val], 
+                variable=self.catchment_var)
+            button.grid(column=col, row=0, padx=5)
+
+
+        # Infectiousness of pathogen chooser 
+        self.infectiousness_frame = ttk.LabelFrame(self.pathogen_frame, text='Infectiousness')
+        self.infectiousness_frame.grid(row = 3, column = 0, padx = 5, pady = 5)
+        self.infectiousness_var = tk.StringVar()
+        self.infectiousness_values = {'Low': 0.03, 'Medium': 0.1, 'High': 0.25}
+        self.infectiousness_var.set(self.infectiousness_values['Medium'])
+
+        for col, val in enumerate(self.infectiousness_values.keys()):
+            
+            button = ttk.Radiobutton(self.infectiousness_frame, 
+                text=val, 
+                value=self.infectiousness_values[val], 
+                variable=self.infectiousness_var)
+            button.grid(column=col, row=0, padx=5)
+
+
+        self.save_button = ttk.Button(self, text='Save', command=lambda:self.save())
+        self.save_button.pack(pady = 5)
+        
+        self.exit_button = ttk.Button(self, text='Exit', command=lambda:self.exit())
+        self.exit_button.pack()
+
+
+    def save(self):
+
+        self.config['app']['theme'] = str(self.theme_var.get())
+        self.config['pathogen']['lethality'] = float(self.lethality_var.get())
+        self.config['pathogen']['curability'] = float(self.curability_var.get())
+        self.config['pathogen']['catchment'] = float(self.catchment_var.get())
+
+        self.config['pathogen']['catchment'] = float(self.catchment_var.get())
+
+        with open(self.config_addr, 'w') as config_file: 
+            config_file.write(json.dumps(self.config))
+         
+    def exit(self):
+        self.save()
+        self.destroy()
+
+def call_stack_statistics():
 
     import cProfile
     import pstats
 
+    with cProfile.Profile() as pr:
+        simulation = Simulation()
+        simulation.communities[0].population.sprites()[0].infect()
+        simulation.run()
+
+    stats = pstats.Stats(pr)
+    stats.sort_stats(pstats.SortKey.TIME)
+
+if __name__ == '__main__':
+    # User defines config
+    menu = Menu()
+    menu.mainloop()
+
+    '''
+    # Load config and global vars
     with open('config.json', 'r') as config_file:
         config = json.loads(config_file.read())
 
@@ -886,9 +1016,9 @@ if __name__ == '__main__':
         vars['infectiousness'],
         vars['lethality'])
 
-    with cProfile.Profile() as pr:
-        Test.Simulation().run()
+    # Start simulation 
+    simulation = Simulation()
+    simulation.mainloop()
+    
+    '''
 
-    stats = pstats.Stats(pr)
-    stats.sort_stats(pstats.SortKey.TIME)
-    #stats.nm,
