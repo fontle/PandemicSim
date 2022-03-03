@@ -312,6 +312,29 @@ class Simulation:
         self.controls_size = (config['app']['sidebar_width'], config['app']['bar_height'])
         self.communities = self.__calc_communities()
 
+        # Create application size defined by config json
+        window_size = (self.sim_size[0] + self.sidebar_size[0], self.sim_size[1] + self.botbar_size[1])
+        self.window = pygame.display.set_mode(window_size)
+        self.render = Render() # Create render methods for standard symbols
+
+        # Create GUI layout
+        self.sim_surf= pygame.Surface(self.sim_size)
+        self.sidebar_surf = pygame.Surface(self.sidebar_size)
+        self.botbar_surf = pygame.Surface(self.botbar_size)
+        self.controls_surf = pygame.Surface(self.controls_size)
+
+        # Font Initialisation
+        self.font_size = self.sidebar_size[1] // 25
+        self.font = pygame.font.SysFont('Calibri', self.font_size)
+
+        # Create graph to be rendered in sidebar
+        self.graph = Graph((self.sidebar_size[0], self.sim_size[1]//2), self.font)
+
+        self.delay = 0.016 
+        self.speed_states = {
+            0.008 : self.render.fast_symbol,
+            0.016: self.render.normal_speed_symbol, 
+            0.064: self.render.slow_symbol}
 
     def __calc_communities(self) -> list:
         '''
@@ -357,18 +380,13 @@ class Simulation:
                     self.running = False
 
                 if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        self.running = False
+                        paused = False 
                     if event.key == pygame.K_p:
                         paused = False
 
             pygame.display.update()
-
-
-    def __speed_up(self) -> None:
-        pass
-
-
-    def __slow_down(self) -> None:
-        pass
 
 
     def __render_sidebar(self) -> None:
@@ -376,15 +394,17 @@ class Simulation:
         Controls the rendering of the sidebar in pygame window.
         '''
 
+        # Calculate R number
         r = round(1 + (sim_vars['susceptible'] - sim_vars['infected']) / sim_vars['old_infected'], 2)
+        sim_vars['old_infected'] = sim_vars['infected']
 
+        # Update counter on label
         infected_label = self.font.render(f'Infected:{sim_vars["infected"]}', True, theme['infected'])
         susceptible_label = self.font.render(f'Susceptible:{sim_vars["susceptible"]}', True, theme['susceptible'])
         dead_label = self.font.render(f'Dead:{sim_vars["dead"]}', True, theme['dead'])
         r_label = self.font.render(f'R:{r}', True, theme['immune'])
 
-        sim_vars['old_infected'] = sim_vars['infected']
-
+        # Render changes to surface
         self.sidebar_surf.blit(susceptible_label, (0, self.y_buffer))
         self.sidebar_surf.blit(infected_label, (0, self.y_buffer + self.font_size * 1.25))
         self.sidebar_surf.blit(dead_label, (0,  self.y_buffer + self.font_size * 2.5))
@@ -396,34 +416,20 @@ class Simulation:
         Controls the rendering and updating of the graph object in sidebar. 
         '''
 
+        # Add latest values to graph 
         self.graph.plot()
+
+        # Update state of graph surface
         self.graph.draw()
+
+        # Draw updated graph to application
         self.sidebar_surf.blit(self.graph.surf, (0, self.sim_size[1]//2))
 
 
     def run(self) -> None:
-
         '''
         Instantiates pygame window and starts the simulation. 
         '''
-
-        # Create application size defined by config json
-        window_size = (self.sim_size[0] + self.sidebar_size[0], self.sim_size[1] + self.botbar_size[1])
-        self.window = pygame.display.set_mode(window_size)
-        self.render = Render() # Create render methods for standard symbols
-
-        # Create GUI layout
-        self.sim_surf= pygame.Surface(self.sim_size)
-        self.sidebar_surf = pygame.Surface(self.sidebar_size)
-        self.botbar_surf = pygame.Surface(self.botbar_size)
-        self.controls_surf = pygame.Surface(self.controls_size)
-
-        # Font Initialisation
-        self.font_size = self.sidebar_size[1] // 25
-        self.font = pygame.font.SysFont('Calibri', self.font_size)
-
-        # Create graph to be rendered in sidebar
-        self.graph = Graph((self.sidebar_size[0], self.sim_size[1]//2), self.font)
 
         bgcolor = theme['app_background']
         self.running = True
@@ -482,15 +488,30 @@ class Simulation:
                         self.running = False
                     if event.key == pygame.K_p:
                         self.__pause()
+                    if event.key == pygame.K_LEFT:
+
+                        if self.delay != 0.064: 
+                            self.delay = 0.064
+                        else: 
+                            self.delay = 0.016
+
+                    if event.key == pygame.K_RIGHT:
+                        
+                        if self.delay != 0.008: 
+                            self.delay = 0.008
+                        else: 
+                            self.delay = 0.016
 
             # Render all frames to main window
             self.window.blit(self.sim_surf, (0, 0))
             self.window.blit(self.sidebar_surf, (self.sim_size[0], 0))
             self.window.blit(self.controls_surf, (self.sim_size))
             self.window.blit(self.botbar_surf, (0, self.sim_size[1]))
+            # Render speed symbol 
+            self.speed_states[self.delay](self.window)
             # Update display
             pygame.display.update()
-            time.sleep(0.016) # 60 updates a second
+            time.sleep(self.delay) # 60 updates a second
 
 
 
