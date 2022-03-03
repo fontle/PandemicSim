@@ -205,7 +205,8 @@ class Graph:
         self.values = {
             tuple(theme['infected']) : [sim_vars['infected']],
             tuple(theme['susceptible']) : [sim_vars['susceptible']],
-            tuple(theme['dead']) : [sim_vars['dead']]
+            tuple(theme['dead']) : [sim_vars['dead']],
+            tuple(theme['immune']) : [sim_vars['immune']]
         }
 
     def plot(self) -> None:
@@ -216,7 +217,7 @@ class Graph:
         self.values[tuple(theme['infected'])].append(sim_vars['infected'])
         self.values[tuple(theme['susceptible'])].append(sim_vars['susceptible'])
         self.values[tuple(theme['dead'])].append(sim_vars['dead'])
-
+        self.values[tuple(theme['immune'])].append(sim_vars['immune'])
         
     def __draw_axis(self):
 
@@ -484,6 +485,7 @@ class Simulation:
                     self.running = False
                 # User pressed key -> perform related event
                 if event.type == pygame.KEYDOWN:
+
                     if event.key == pygame.K_q:
                         self.running = False
                     if event.key == pygame.K_p:
@@ -546,6 +548,8 @@ class Person(pygame.sprite.Sprite):
 
         # Route behaviour
         self.dest = None
+        # How many cycles the person will stay at the destination
+        self.stay_time = 100
         
         
     def kill(self):
@@ -608,7 +612,7 @@ class Person(pygame.sprite.Sprite):
 
         # Adjust global counters
         sim_vars['infected'] -= 1 
-        sim_vars['susceptible'] += 1
+        sim_vars['immune'] += 1
 
 
     def set_random_location(self) -> None: 
@@ -644,8 +648,6 @@ class Person(pygame.sprite.Sprite):
             self.dest = None
             
 
-
-
     def update(self) -> bool:
         '''
         Controls movement of the person.
@@ -664,7 +666,6 @@ class Person(pygame.sprite.Sprite):
         x,y = self.coords
         
         if self.dest == None:
-
 
             # New coordinates
             nx = eval(f'{x}{random.choice(["+", "-"])}{self.movement}') 
@@ -698,13 +699,21 @@ class Person(pygame.sprite.Sprite):
                 # If home doesnt exist and person at destination 
                 # then person has returned home
                 try: 
-                    self.route(self.home, False)
-                    del self.home
+                    if self.stay_time == 0:
+
+                        self.stay_time = 100
+                        self.route(self.home, False)
+
+                        del self.home
+
+                    else:
+                        self.stay_time -= 1
 
                 except AttributeError:
                     self.dest = None
+                    self.stay_time == 100
 
-                nx, ny = self.coords
+                nx, ny = dx, dy
 
             # Add vector to coords
             else:
@@ -736,7 +745,7 @@ class Place(pygame.sprite.Sprite):
 
         self.rect.x = random.randint(1,community_size[0] - self.size[0])
         self.rect.y = random.randint(1,community_size[1] - self.size[1])
-        self.coords = (self.rect.x, self.rect.y)
+        self.coords = (self.rect.x + self.size[0]/2, self.rect.y + self.size[1]/2)
 
 
 
@@ -792,11 +801,16 @@ class Community:
             elif person.infected == True:
                 infected.append(person)
 
+            elif person.immune == True:
+                immune.append(person)
             else:
                 susceptible.append(person)
+
+            if person.dest != None:
+                pygame.draw.line(self.surf, (0,255,255), person.coords, person.dest) 
+
         # zombie refering to infected person 
         for zombie in infected: 
-            
            for person in susceptible:
                 pathogen.infect(person, zombie)
 
@@ -877,4 +891,4 @@ if __name__ == '__main__':
 
     stats = pstats.Stats(pr)
     stats.sort_stats(pstats.SortKey.TIME)
-    #stats.print_stats()
+    #stats.nm,

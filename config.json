@@ -27,7 +27,7 @@
 		"place_upper_bound" : 2,
 		"total_population" : 600, 
 		"dead" : 0, 
-		"vaccinated" : 0, 
+		"immune" : 0, 
 		"susceptible" : 600,
 		"infected" : 0,
 		"old_infected" : 1 
