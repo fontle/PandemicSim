@@ -84,7 +84,7 @@
         "place_lower_bound": 0,
         "place_upper_bound": 1,
         "move_chance": 0.05,
-        "migration_chance": 0.01,
+        "migration_chance": 0.05,
         "total_population": 600,
         "dead": 0,
         "immune": 0,
@@ -102,7 +102,7 @@
         "theme": "dark"
     },
     "pathogen": {
-        "catchment": 0.001,
+        "catchment": 5.0,
         "curability": 0.001,
         "infectiousness": 0.15,
         "lethality": 0.001

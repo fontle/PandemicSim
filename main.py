@@ -471,6 +471,7 @@ class Simulation:
                         new_community = random.choice(valid)
                         community.population.remove(person)
                         person.set_random_location()
+                        person.community_size = new_community.surf_size
                         new_community.population.add(person)
 
                 # Render places to surface
@@ -607,6 +608,7 @@ class Person(pygame.sprite.Sprite):
         
         # Update person state
         self.infected = False
+        
         if immune:
             self.immune = True
             self.image.fill(theme['immune'])
@@ -803,6 +805,7 @@ class Community:
 
             elif person.immune == True:
                 immune.append(person)
+
             else:
                 susceptible.append(person)
 
@@ -959,11 +962,47 @@ class Menu(tk.Tk):
             button.grid(column=col, row=0, padx=5)
 
 
+        self.mitigation_frame = ttk.LabelFrame(self, text = 'Mitigations') 
+        self.mitigation_frame.pack(padx = 5, pady = 5)
+
+        # Migration chance chooser
+        self.migrations_frame = ttk.LabelFrame(self.mitigation_frame, text='Migrations')
+        self.migrations_frame.grid(row = 0, column = 0, padx = 5, pady = 5)
+        self.migrations_var = tk.StringVar()
+        self.migrations_values = {'Low': 0.01, 'Medium': 0.1, 'High': 0.25}
+        self.migrations_var.set(self.migrations_values['Medium'])
+
+        for col, val in enumerate(self.migrations_values.keys()):
+            
+            button = ttk.Radiobutton(self.migrations_frame, 
+                text=val, 
+                value=self.migrations_values[val], 
+                variable=self.migrations_var)
+            button.grid(column=col, row=0, padx=5)
+
+
+        # Move chance chance chooser
+        self.movements_frame = ttk.LabelFrame(self.mitigation_frame, text='Movement Chance')
+        self.movements_frame.grid(row = 1, column = 0, padx = 5, pady = 5)
+        self.movements_var = tk.StringVar()
+        self.movements_values = {'Low': 0.01, 'Medium': 0.05, 'High': 0.15}
+        self.movements_var.set(self.movements_values['Medium'])
+
+        for col, val in enumerate(self.movements_values.keys()):
+            
+            button = ttk.Radiobutton(self.movements_frame, 
+                text=val, 
+                value=self.movements_values[val], 
+                variable=self.movements_var)
+            button.grid(column=col, row=0, padx=5)
+
+
         self.save_button = ttk.Button(self, text='Save', command=lambda:self.save())
         self.save_button.pack(pady = 5)
         
         self.exit_button = ttk.Button(self, text='Exit', command=lambda:self.exit())
         self.exit_button.pack()
+
 
 
     def save(self):
@@ -972,8 +1011,11 @@ class Menu(tk.Tk):
         self.config['pathogen']['lethality'] = float(self.lethality_var.get())
         self.config['pathogen']['curability'] = float(self.curability_var.get())
         self.config['pathogen']['catchment'] = float(self.catchment_var.get())
-
         self.config['pathogen']['catchment'] = float(self.catchment_var.get())
+
+        self.config['simulation']['migration_chance'] = float(self.migrations_var.get())
+
+        self.config['simulation']['migration_chance'] = float(self.movements_var.get())
 
         with open(self.config_addr, 'w') as config_file: 
             config_file.write(json.dumps(self.config))
@@ -998,9 +1040,9 @@ def call_stack_statistics():
 if __name__ == '__main__':
     # User defines config
     menu = Menu()
+    menu.title = 'Simulation Configuration'
     menu.mainloop()
 
-    '''
     # Load config and global vars
     with open('config.json', 'r') as config_file:
         config = json.loads(config_file.read())
@@ -1020,5 +1062,4 @@ if __name__ == '__main__':
     simulation = Simulation()
     simulation.mainloop()
     
-    '''
 
