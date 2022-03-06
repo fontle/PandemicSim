@@ -43,13 +43,17 @@ class Pathogen:
             infected: Person()
         '''
 
+        if susceptible.infected == True:
+            return 
+        if infected.infected == False: 
+            return
+
         sx, sy = susceptible.coords
         ix, iy = infected.coords
 
         if random.random() < self.infectiousness:
 
             if abs(sx - ix) <= self.catchment and abs(sy - iy) <= self.catchment:
-                
                 susceptible.infect()
 
 
@@ -405,26 +409,24 @@ class Simulation:
         infected_label = self.font.render(f'Infected:{sim_vars["infected"]}', True, theme['infected'])
         susceptible_label = self.font.render(f'Susceptible:{sim_vars["susceptible"]}', True, theme['susceptible'])
         dead_label = self.font.render(f'Dead:{sim_vars["dead"]}', True, theme['dead'])
-        r_label = self.font.render(f'R:{r}', True, theme['immune'])
+        immune_label = self.font.render(f'Immune:{sim_vars["immune"]}', True, theme['immune'])
+        r_label = self.font.render(f'R:{r}', True, theme['r_label'])
 
         # Render changes to surface
         self.sidebar_surf.blit(susceptible_label, (0, self.y_buffer))
         self.sidebar_surf.blit(infected_label, (0, self.y_buffer + self.font_size * 1.25))
         self.sidebar_surf.blit(dead_label, (0,  self.y_buffer + self.font_size * 2.5))
-        self.sidebar_surf.blit(r_label, (0,  self.y_buffer + self.font_size * 3.75))
-
-
+        self.sidebar_surf.blit(immune_label, (0,  self.y_buffer + self.font_size * 3.75))
+        self.sidebar_surf.blit(r_label, (0,  self.y_buffer + self.font_size * 5))
+        
     def __render_graph(self) -> None:
         '''
         Controls the rendering and updating of the graph object in sidebar. 
         '''
 
-        # Add latest values to graph 
+        # Update graph
         self.graph.plot()
-
-        # Update state of graph surface
         self.graph.draw()
-
         # Draw updated graph to application
         self.sidebar_surf.blit(self.graph.surf, (0, self.sim_size[1]//2))
 
