@@ -12,8 +12,8 @@ import tkinter.messagebox as messagebox
 
 # Imports from constructorless classes
 from dataclasses import dataclass
+pygame.init()
 pygame.font.init()
-
 
 class Pathogen:
 
@@ -323,6 +323,8 @@ class Simulation:
         # Create application size defined by config json
         window_size = (self.sim_size[0] + self.sidebar_size[0], self.sim_size[1] + self.botbar_size[1])
         self.window = pygame.display.set_mode(window_size)
+        pygame.display.set_caption('Pandemic Simulation')
+        pygame.display.set_icon(pygame.image.load('icon.png'))
         self.render = Render() # Create render methods for standard symbols
 
         # Create GUI layout
@@ -872,7 +874,8 @@ class Menu(tk.Tk):
     def __init__(self, config_addr = 'config.json'):
         super().__init__()
 
-        self.title = 'Pandemic Simulation Configuration'
+        self.iconphoto(False, tk.PhotoImage(file='icon.png'))
+        self.title('Simulation Configuration')
 
         self.config_addr = config_addr
         with open(self.config_addr, 'r') as config_file: 
