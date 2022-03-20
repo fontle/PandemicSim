@@ -1,52 +1,51 @@
 # Author: Isaac Beight-Welland
 # A simple pandemic simulation created in pygame.
 # Made for AQA A level Computer Science NEA 2021/22
-# pylint: disable=E1101 
+# pylint: disable=E1101
 import pygame, json, random, time, math
 import numpy as np
 
-# Imports for menu screen 
-import tkinter as tk 
-from tkinter import ttk 
-import tkinter.messagebox as messagebox
+# Imports for menu screen
+import tkinter as tk
+from tkinter import ttk
 
-# Imports from constructorless classes
-from dataclasses import dataclass
+import render
+
 pygame.init()
 pygame.font.init()
 
 class Pathogen:
 
     '''
-    Purpose: Class that contains methods for characteristics 
+    Purpose: Class that contains methods for characteristics
     of pathogen spread.
     '''
 
     def __init__(self, catchment:float, curability:float, infectiousness:float, lethality:float ) -> None:
 
         # Manhattan Distance Person has to be from other to get infected
-        self.catchment = catchment 
+        self.catchment = catchment
         # Chance person will get infected from other person
-        self.infectiousness = infectiousness 
+        self.infectiousness = infectiousness
         # The probability infected would die every cycle
-        self.lethality = lethality 
+        self.lethality = lethality
         # The rate at which the probability of someone being cured from the disease increases every cycle
-        self.curability = curability 
+        self.curability = curability
 
 
-    def infect(self, susceptible, infected) -> None: 
+    def infect(self, susceptible, infected) -> None:
         '''
         Purpose: Given two people who have been in contact;
         returns whether the infected person infects the other 'person'
 
-        Arguments: 
+        Arguments:
             susceptible: Person()
             infected: Person()
         '''
 
         if susceptible.infected == True:
-            return 
-        if infected.infected == False: 
+            return
+        if infected.infected == False:
             return
 
         sx, sy = susceptible.coords
@@ -58,7 +57,7 @@ class Pathogen:
                 susceptible.infect()
 
 
-    def update_health(self, person): 
+    def update_health(self, person):
         '''
         Calculates whether an infected person dies or is cured within a cycle.
 
@@ -68,119 +67,19 @@ class Pathogen:
 
         if random.random() < self.curability:
             person.cure(True)
-            return 
+            return
 
         else:
             person.cure_chance += self.curability
 
         if random.random() < self.lethality:
-            
+
             person.kill()
-            
 
-@dataclass
-class Render:
-
-    def __alpha_rect(self, surf: pygame.Surface, colour: tuple, rect: tuple) -> None:
-        '''
-        Creates a rectangle with transparent colour.
-
-        Args:
-            surf: pygame.Surface
-            colour: (r, g, b, a)
-            rect: (x, y, width, height)
-
-        '''
-
-        shape_surf = pygame.Surface(pygame.Rect(rect).size, pygame.SRCALPHA)
-        pygame.draw.rect(shape_surf, colour, shape_surf.get_rect())
-        surf.blit(shape_surf, rect)
-
-    """ 
-    def __alpha_circle(self, surf: pygame.Surface, colour: tuple, center: tuple, radius: int) -> None:
-        '''
-        Creates a circle with transparent colour.
-
-        Args:
-            surf: pygame.Surface
-            colour: (r, g, b, a)
-            center: (x, y)
-            radius: int
-        '''
-
-        target_rect = pygame.Rect(center, (0, 0)).inflate((radius * 2, radius * 2))
-        shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
-        pygame.draw.circle(shape_surf, colour, (radius, radius), radius)
-        surf.blit(shape_surf, target_rect)
-
-    """
-
-    def __alpha_polygon(self, surf: pygame.Surface, colour: tuple, points: tuple) -> None:
-        '''
-        Creates transparent polygon with defined number of points.
-
-        Arguments:
-            surf: pygame.Surface
-            colour: (r, g, b, a)
-            points: ((x1, y1), (x2, y2), (x3, y3) ... )
-        '''
-
-        lx, ly = zip(*points)
-        min_x, min_y, max_x, max_y = min(lx), min(ly), max(lx), max(ly)
-
-        target_rect = pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
-        shape_surf = pygame.Surface(target_rect.size, pygame.SRCALPHA)
-        pygame.draw.polygon(shape_surf, colour, [(x - min_x, y - min_y) for x, y in points])
-        surf.blit(shape_surf, target_rect)
-
-
-    def normal_speed_symbol(self, surf: pygame.Surface) -> None:
-        '''
-        Renders normal speed symbol on top left of surface provided.
-
-        Args: 
-            surf: pygame.Surface 
-        '''
-        self.__alpha_polygon(surf, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
-        self.__alpha_polygon(surf, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
-
-
-    def fast_symbol(self, surf: pygame.Surface) -> None:
-        '''
-        Renders fast speed symbol on top left surface provided.
-
-        Args:
-            surf: pygame.Surface
-        '''
-        self.__alpha_polygon(surf, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
-        self.__alpha_polygon(surf, (255, 255, 255, 100), ((30, 10), (50, 20), (30, 30)))
-        self.__alpha_polygon(surf, (255, 255, 255, 100), ((50, 10), (70, 20), (50, 30)))
-
-
-    def slow_symbol(self, surf: pygame.Surface) -> None:
-        '''
-        Renders slow speed symbol on top left surface provided.
-
-        Args: 
-            surf: pygame.Surface
-        '''
-        self.__alpha_polygon(surf, (255, 255, 255, 100), ((10, 10), (30, 20), (10, 30)))
-        
-
-    def pause_symbol(self, surf: pygame.Surface) -> None:
-        '''
-        Renders slow speed symbol on top left surf provided.
-
-        Args: 
-            surf: pygame.Surface
-        '''
-        width = surf.get_rect().width
-        self.__alpha_rect(surf, (180, 180, 180, 4),(width- 20, 10, 10, 30))
-        self.__alpha_rect(surf, (180, 180, 180, 4),(width - 37, 10, 10, 30))
 
 
 class Graph:
-    
+
     '''
     Class that handles graphs in the simulation, capable of line graphs only.
 
@@ -194,7 +93,7 @@ class Graph:
 
     def __init__(self, size: tuple[int, int], font:pygame.font.SysFont, title = ''):
 
-        global sim_vars, theme, pathogen 
+        global sim_vars, theme, pathogen
 
         # Initialise vars
         self.surf = pygame.Surface((size))
@@ -205,13 +104,13 @@ class Graph:
         self.width, self.height = size
         self.n_buff = self.height // 10
 
-        # Puts graph in line with simulation as uses same buff as community 
-        sim_size = config['app']['sim_size']    
+        # Puts graph in line with simulation as uses same buff as community
+        sim_size = config['app']['sim_size']
         sim_width, sim_height = sim_size
         layout = sim_vars['community_layout']
         self.s_buff = sim_height/(len(layout)*10)
 
-        self.w_buff = 0 
+        self.w_buff = 0
         self.e_buff = self.width // 10
         # Create values to be plotted
         self.values = {
@@ -224,13 +123,13 @@ class Graph:
     def plot(self) -> None:
         '''
         Add values to be plotted to the graph; the value parameter is a multi-dimensional
-        array corresponding to the number of lines on the graph. 
+        array corresponding to the number of lines on the graph.
         '''
         self.values[tuple(theme['infected'])].append(sim_vars['infected'])
         self.values[tuple(theme['susceptible'])].append(sim_vars['susceptible'])
         self.values[tuple(theme['dead'])].append(sim_vars['dead'])
         self.values[tuple(theme['immune'])].append(sim_vars['immune'])
-        
+
     def __draw_axis(self):
 
         self.y_max = sim_vars['total_population']
@@ -256,7 +155,7 @@ class Graph:
 
         # The maximum x value of both lines
         self.x_max = max([len(line) for line in self.values.values()])
-        # The number of pixels rendered between each item in the list 
+        # The number of pixels rendered between each item in the list
         self.x_scale = (self.width-self.e_buff-self.w_buff)/self.x_max
 
 
@@ -267,7 +166,7 @@ class Graph:
 
             x_last = round(self.w_buff + (self.x_scale / 2))
             y_last = round((self.height - self.s_buff) - (self.y_scale * line_values[0]))
-            
+
             # Draw every plot for specified line
             for point_count, point in enumerate(line_values):
 
@@ -277,7 +176,7 @@ class Graph:
                 # Draws line between current and last position
                 pygame.draw.line(
                     self.surf,
-                    line_colour, 
+                    line_colour,
                     (x_last, y_last),
                     (x_pos, y_pos),
                     width=2)
@@ -293,7 +192,7 @@ class Graph:
             maximum: integer, sets the maximum value of the y-axis (optional)
         '''
 
-        global theme 
+        global theme
 
         self.surf.fill(theme['app_background'])
         self.surf.blit(self.title, (self.w_buff, self.height-self.s_buff))
@@ -306,7 +205,7 @@ class Simulation:
     '''
     Controls the main pygame window, has Communnity instances as frames
 
-    Args: 
+    Args:
         config: str path of config.json
     '''
 
@@ -325,7 +224,6 @@ class Simulation:
         self.window = pygame.display.set_mode(window_size)
         pygame.display.set_caption('Pandemic Simulation')
         pygame.display.set_icon(pygame.image.load('icon.png'))
-        self.render = Render() # Create render methods for standard symbols
 
         # Create GUI layout
         self.sim_surf= pygame.Surface(self.sim_size)
@@ -340,17 +238,17 @@ class Simulation:
         # Create graph to be rendered in sidebar
         self.graph = Graph((self.sidebar_size[0], self.sim_size[1]//2), self.font)
 
-        self.delay = 0.016 
+        self.delay = 0.016
         self.speed_states = {
-            0.008 : self.render.fast_symbol,
-            0.016: self.render.normal_speed_symbol, 
-            0.064: self.render.slow_symbol}
+            0.008 : render.fast_symbol,
+            0.016: render.normal_speed_symbol,
+            0.064: render.slow_symbol}
 
     def __calc_communities(self) -> list:
         '''
-        Initialises communities according to config file. 
+        Initialises communities according to config file.
 
-        Returns: 
+        Returns:
             list of community objects.
         '''
         communities = []
@@ -380,7 +278,7 @@ class Simulation:
         while paused:
 
             # Render Pause bars
-            self.render.pause_symbol(self.window)
+            render.pause_symbol(self.window)
 
             # Event handling for pause menu
             for event in pygame.event.get():
@@ -392,7 +290,7 @@ class Simulation:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
-                        paused = False 
+                        paused = False
                     if event.key == pygame.K_p:
                         paused = False
 
@@ -407,7 +305,7 @@ class Simulation:
         # Calculate R number
         try:
             r = round(1 + (sim_vars['susceptible'] - sim_vars['infected']) / sim_vars['old_infected'], 2)
-        except ZeroDivisionError: 
+        except ZeroDivisionError:
             r = 0
         sim_vars['old_infected'] = sim_vars['infected']
 
@@ -424,10 +322,10 @@ class Simulation:
         self.sidebar_surf.blit(dead_label, (0,  self.y_buffer + self.font_size * 2.5))
         self.sidebar_surf.blit(immune_label, (0,  self.y_buffer + self.font_size * 3.75))
         self.sidebar_surf.blit(r_label, (0,  self.y_buffer + self.font_size * 5))
-        
+
     def __render_graph(self) -> None:
         '''
-        Controls the rendering and updating of the graph object in sidebar. 
+        Controls the rendering and updating of the graph object in sidebar.
         '''
 
         # Update graph
@@ -439,17 +337,17 @@ class Simulation:
 
     def mainloop(self) -> None:
         '''
-        Instantiates pygame window and starts the simulation. 
+        Instantiates pygame window and starts the simulation.
         '''
 
         self.communities[0].population.sprites()[0].infect()
         bgcolor = theme['app_background']
         self.running = True
         while self.running:
-            
+
             # Fill backgrounds for re-rendering
-            self.sim_surf.fill(bgcolor) 
-            self.sidebar_surf.fill(bgcolor) 
+            self.sim_surf.fill(bgcolor)
+            self.sidebar_surf.fill(bgcolor)
             self.controls_surf.fill(bgcolor)
             self.botbar_surf.fill(bgcolor)
 
@@ -457,7 +355,7 @@ class Simulation:
             self.__render_sidebar()
             self.__render_graph()
 
-            # Update community and render 
+            # Update community and render
             for community in self.communities:
 
                 community.surf.fill(theme['community_background'])
@@ -483,7 +381,7 @@ class Simulation:
                         new_community.population.add(person)
 
                 # Render places to surface
-                community.places.draw(community.surf)    
+                community.places.draw(community.surf)
                 # Render population to the community surface
                 community.population.draw(community.surf)
                 # Render community surface to main window
@@ -504,16 +402,16 @@ class Simulation:
                         self.__pause()
                     if event.key == pygame.K_LEFT:
 
-                        if self.delay != 0.064: 
+                        if self.delay != 0.064:
                             self.delay = 0.064
-                        else: 
+                        else:
                             self.delay = 0.016
 
                     if event.key == pygame.K_RIGHT:
-                        
-                        if self.delay != 0.008: 
+
+                        if self.delay != 0.008:
                             self.delay = 0.008
-                        else: 
+                        else:
                             self.delay = 0.016
 
             # Render all frames to main window
@@ -521,7 +419,7 @@ class Simulation:
             self.window.blit(self.sidebar_surf, (self.sim_size[0], 0))
             self.window.blit(self.controls_surf, (self.sim_size))
             self.window.blit(self.botbar_surf, (0, self.sim_size[1]))
-            # Render speed symbol 
+            # Render speed symbol
             self.speed_states[self.delay](self.window)
             # Update display
             pygame.display.update()
@@ -555,15 +453,15 @@ class Person(pygame.sprite.Sprite):
         self.dead = False
         self.immune = False
         self.infected = False
-        self.cure_chance = 0 
+        self.cure_chance = 0
         self.despawn_time = 300 # Equivalent to 5s at 60hz
 
         # Route behaviour
         self.dest = None
         # How many cycles the person will stay at the destination
         self.stay_time = 100
-        
-        
+
+
     def kill(self):
         '''
         Kills the person from the Simulation
@@ -574,26 +472,26 @@ class Person(pygame.sprite.Sprite):
             return
         if self.infected == False:
             return
-            
+
         # Update person vars
-        self.dead = True 
-        self.infected = False 
+        self.dead = True
+        self.infected = False
         self.cure_chance = 0
         self.immune = False
         self.image.fill(theme['dead'])
 
         # Update sim_vars
-        sim_vars['dead'] += 1 
+        sim_vars['dead'] += 1
         sim_vars['infected'] -= 1
-    
+
 
     def infect(self):
         '''
         Infects a person.
         '''
-        # Guard checks to ensure person is infectable 
+        # Guard checks to ensure person is infectable
         if self.dead == True:
-            return 
+            return
         if self.immune == True:
             return
 
@@ -601,7 +499,7 @@ class Person(pygame.sprite.Sprite):
         self.image.fill(theme['infected'])
 
         sim_vars['infected'] += 1
-        sim_vars['susceptible'] -= 1 
+        sim_vars['susceptible'] -= 1
 
 
     def cure(self, immune = False):
@@ -613,10 +511,10 @@ class Person(pygame.sprite.Sprite):
             return
         if self.infected == False:
             return
-        
+
         # Update person state
         self.infected = False
-        
+
         if immune:
             self.immune = True
             self.image.fill(theme['immune'])
@@ -624,28 +522,28 @@ class Person(pygame.sprite.Sprite):
             self.image.fill(theme['susceptible'])
 
         # Adjust global counters
-        sim_vars['infected'] -= 1 
+        sim_vars['infected'] -= 1
         sim_vars['immune'] += 1
 
 
-    def set_random_location(self) -> None: 
+    def set_random_location(self) -> None:
         '''
         Move person to random location in commmunity
         '''
         self.rect.x = random.randint(1,self.community_size[0] - self.size[0])
         self.rect.y = random.randint(1,self.community_size[1] - self.size[1])
-        self.coords = self.rect.x, self.rect.y 
+        self.coords = self.rect.x, self.rect.y
 
 
     def route(self, dest: tuple[int,int], set_home: bool) -> None:
-        
+
         # Set a home which can be returned to
         if set_home == True:
             self.home = self.coords
 
         self.dest = dest
 
-        x1, y1 = self.coords 
+        x1, y1 = self.coords
         x2, y2 = self.dest
 
         i, j = x2 - x1, y2 - y1
@@ -659,7 +557,7 @@ class Person(pygame.sprite.Sprite):
         # This means person already next to the destination, so do not create route
         except ZeroDivisionError:
             self.dest = None
-            
+
 
     def update(self) -> bool:
         '''
@@ -669,7 +567,7 @@ class Person(pygame.sprite.Sprite):
         '''
 
         # Dead people can do anything so return
-        if self.dead == True: 
+        if self.dead == True:
             if self.despawn_time == 0:
                 return True
             else:
@@ -677,11 +575,11 @@ class Person(pygame.sprite.Sprite):
                 return False
 
         x,y = self.coords
-        
+
         if self.dest == None:
 
             # New coordinates
-            nx = eval(f'{x}{random.choice(["+", "-"])}{self.movement}') 
+            nx = eval(f'{x}{random.choice(["+", "-"])}{self.movement}')
             ny = eval(f'{y}{random.choice(["+", "-"])}{self.movement}')
             # Boundaries of community
             mx, my = self.community_size
@@ -704,14 +602,14 @@ class Person(pygame.sprite.Sprite):
         else:
 
             # Person arrived at destination
-           
+
             dx, dy = self.dest # Destination coords
 
             if abs(dx - x) < 10 and abs(dy - y) < 10:
 
-                # If home doesnt exist and person at destination 
+                # If home doesnt exist and person at destination
                 # then person has returned home
-                try: 
+                try:
                     if self.stay_time == 0:
 
                         self.stay_time = 100
@@ -730,15 +628,15 @@ class Person(pygame.sprite.Sprite):
 
             # Add vector to coords
             else:
-                x, y = self.coords 
+                x, y = self.coords
                 i, j = self.vector
-                nx = x + i 
+                nx = x + i
                 ny = y + j
 
-        # Update position of rect on surface 
-        self.rect.x = round(nx) 
+        # Update position of rect on surface
+        self.rect.x = round(nx)
         self.rect.y = round(ny)
-        self.coords = nx, ny 
+        self.coords = nx, ny
 
         return False
 
@@ -747,7 +645,7 @@ class Place(pygame.sprite.Sprite):
 
     def __init__(self, community_size):
 
-        global sim_vars, theme 
+        global sim_vars, theme
 
         pygame.sprite.Sprite.__init__(self)
 
@@ -779,7 +677,7 @@ class Community:
         for _ in range(population):
             self.population.add(Person(self.surf_size))
 
-        # Create places in community 
+        # Create places in community
         self.places = pygame.sprite.Group()
 
         for place in range(places):
@@ -788,19 +686,19 @@ class Community:
     def update(self):
         '''
         Updates the state (dead, immune, susceptible, or infected)
-        of people within the community. 
+        of people within the community.
         '''
 
         population_list = self.population.sprites()
-        susceptible = [] 
+        susceptible = []
         infected = []
         dead = []
         immune = []
 
         for person in population_list:
 
-            despawn = person.update() 
-            
+            despawn = person.update()
+
             if person.dead == True:
 
                 dead.append(person)
@@ -817,27 +715,27 @@ class Community:
                 susceptible.append(person)
 
             if person.dest != None:
-                pygame.draw.line(self.surf, theme['route'], person.coords, person.dest) 
+                pygame.draw.line(self.surf, theme['route'], person.coords, person.dest)
 
-        # zombie refering to infected person 
-        for zombie in infected: 
+        # zombie refering to infected person
+        for zombie in infected:
            for person in susceptible:
                 pathogen.infect(person, zombie)
 
            pathogen.update_health(zombie)
 
-    
+
     def calc_movement_events(self):
         '''
         Manages whether a person heads to a place in a community
         '''
-        if len(self.places) == 0: 
-            return 
+        if len(self.places) == 0:
+            return
 
         move_chance = sim_vars['move_chance']
 
         def check(person):
-            if person.dead == False and person.dest == None: 
+            if person.dead == False and person.dest == None:
                 return True
 
         valid = list(filter(check, self.population.sprites()))
@@ -848,15 +746,15 @@ class Community:
             valid.remove(mover)
 
 
-    def calc_migration_events(self): 
+    def calc_migration_events(self):
         '''
         Manages whether migrations occur.
         '''
 
-        mig_chance = sim_vars['migration_chance'] 
-        
+        mig_chance = sim_vars['migration_chance']
+
         def check(person):
-            if person.dead == False and person.dest == None: 
+            if person.dead == False and person.dest == None:
                 return True
 
         valid = list(filter(check, self.population.sprites()))
@@ -866,7 +764,7 @@ class Community:
             migrant = random.choice(valid)
             migrants.append(migrant)
 
-        return migrants 
+        return migrants
 
 
 class Menu(tk.Tk):
@@ -878,9 +776,9 @@ class Menu(tk.Tk):
         self.title('Simulation Configuration')
 
         self.config_addr = config_addr
-        with open(self.config_addr, 'r') as config_file: 
+        with open(self.config_addr, 'r') as config_file:
             self.config = json.loads(config_file.read())
-            
+
         self.theme = self.config['theme'][self.config['app']['theme']]
         self.sim_vars = self.config['simulation']
         self.app_vars = self.config['app']
@@ -899,14 +797,14 @@ class Menu(tk.Tk):
         self.theme_frame.grid(row=0, column=0, padx = 10, pady = 10, columnspan= 2)
         self.theme_var = tk.StringVar()
         self.theme_var.set("dark")
-        
+
         for col, theme in enumerate(['Light', 'Dark']):
-            
+
             button = ttk.Radiobutton(self.theme_frame, text=theme, value=theme.lower(), variable=self.theme_var)
             button.grid(column=col, row=0, padx=5)
 
 
-        self.pathogen_frame = ttk.LabelFrame(self.column0, text = 'Pathogen') 
+        self.pathogen_frame = ttk.LabelFrame(self.column0, text = 'Pathogen')
         self.pathogen_frame.pack(padx = 5, pady = 5)
 
 
@@ -915,14 +813,14 @@ class Menu(tk.Tk):
         self.lethality_frame.grid(row = 0, column = 0, padx = 5, pady = 5)
         self.lethality_var = tk.StringVar()
         self.lethality_values = {'Low': 0.00001, 'Medium': 0.001, 'High': 0.05}
-        
+
         self.lethality_var.set(self.lethality_values['Medium'])
 
         for col, val in enumerate(self.lethality_values.keys()):
-            
-            button = ttk.Radiobutton(self.lethality_frame, 
-                text=val, 
-                value=self.lethality_values[val], 
+
+            button = ttk.Radiobutton(self.lethality_frame,
+                text=val,
+                value=self.lethality_values[val],
                 variable=self.lethality_var)
             button.grid(column=col, row=0, padx=5)
 
@@ -933,17 +831,17 @@ class Menu(tk.Tk):
         self.curability_var = tk.StringVar()
         self.curability_values = {'Low': 0.00001, 'Medium': 0.001, 'High': 0.05}
         self.curability_var.set(self.curability_values['Medium'])
-        
+
         for col, val in enumerate(self.curability_values.keys()):
-            
-            button = ttk.Radiobutton(self.curability_frame, 
-                text=val, 
-                value=self.curability_values[val], 
+
+            button = ttk.Radiobutton(self.curability_frame,
+                text=val,
+                value=self.curability_values[val],
                 variable=self.curability_var)
             button.grid(column=col, row=0, padx=5)
 
 
-        # Catchment area of pathogen chooser 
+        # Catchment area of pathogen chooser
         self.catchment_frame = ttk.LabelFrame(self.pathogen_frame, text='Catchment')
         self.catchment_frame.grid(row = 2, column = 0, padx = 5, pady = 5)
         self.catchment_var = tk.StringVar()
@@ -951,15 +849,15 @@ class Menu(tk.Tk):
         self.catchment_var.set(self.catchment_values['Medium'])
 
         for col, val in enumerate(self.catchment_values.keys()):
-            
-            button = ttk.Radiobutton(self.catchment_frame, 
-                text=val, 
-                value=self.catchment_values[val], 
+
+            button = ttk.Radiobutton(self.catchment_frame,
+                text=val,
+                value=self.catchment_values[val],
                 variable=self.catchment_var)
             button.grid(column=col, row=0, padx=5)
 
 
-        # Infectiousness of pathogen chooser 
+        # Infectiousness of pathogen chooser
         self.infectiousness_frame = ttk.LabelFrame(self.pathogen_frame, text='Infectiousness')
         self.infectiousness_frame.grid(row = 3, column = 0, padx = 5, pady = 5)
         self.infectiousness_var = tk.StringVar()
@@ -967,15 +865,15 @@ class Menu(tk.Tk):
         self.infectiousness_var.set(self.infectiousness_values['Medium'])
 
         for col, val in enumerate(self.infectiousness_values.keys()):
-            
-            button = ttk.Radiobutton(self.infectiousness_frame, 
-                text=val, 
-                value=self.infectiousness_values[val], 
+
+            button = ttk.Radiobutton(self.infectiousness_frame,
+                text=val,
+                value=self.infectiousness_values[val],
                 variable=self.infectiousness_var)
             button.grid(column=col, row=0, padx=5)
 
 
-        self.mitigation_frame = ttk.LabelFrame(self.column0, text = 'Mitigations') 
+        self.mitigation_frame = ttk.LabelFrame(self.column0, text = 'Mitigations')
         self.mitigation_frame.pack(padx = 5, pady= 5)
 
         # Migration chance chooser
@@ -986,10 +884,10 @@ class Menu(tk.Tk):
         self.migrations_var.set(self.migrations_values['Medium'])
 
         for col, val in enumerate(self.migrations_values.keys()):
-            
-            button = ttk.Radiobutton(self.migrations_frame, 
-                text=val, 
-                value=self.migrations_values[val], 
+
+            button = ttk.Radiobutton(self.migrations_frame,
+                text=val,
+                value=self.migrations_values[val],
                 variable=self.migrations_var)
             button.grid(column=col, row=0, padx=5)
 
@@ -1002,10 +900,10 @@ class Menu(tk.Tk):
         self.movements_var.set(self.movements_values['Medium'])
 
         for col, val in enumerate(self.movements_values.keys()):
-            
-            button = ttk.Radiobutton(self.movements_frame, 
-                text=val, 
-                value=self.movements_values[val], 
+
+            button = ttk.Radiobutton(self.movements_frame,
+                text=val,
+                value=self.movements_values[val],
                 variable=self.movements_var)
             button.grid(column=col, row=0, padx=5)
 
@@ -1016,7 +914,7 @@ class Menu(tk.Tk):
         self.population_slider.set(1000)
         self.population_slider.grid(row = 0, column = 0, padx = 5, pady = 5)
 
-        self.population_label = ttk.Label(self.population_frame, text = round(self.population_slider.get())) 
+        self.population_label = ttk.Label(self.population_frame, text = round(self.population_slider.get()))
         self.population_label.grid(row = 0, column = 1)
 
 
@@ -1052,18 +950,18 @@ class Menu(tk.Tk):
 
     def set_row_label(self):
 
-        self.row_label = ttk.Label(self.row_frame, text = round(self.row_slider.get())) 
+        self.row_label = ttk.Label(self.row_frame, text = round(self.row_slider.get()))
         self.row_label.grid(row = 0, column = 1)
 
 
-    def set_column_label(self):  
+    def set_column_label(self):
 
-        self.col_label = ttk.Label(self.col_frame, text = round(self.col_slider.get())) 
+        self.col_label = ttk.Label(self.col_frame, text = round(self.col_slider.get()))
         self.col_label.grid(row = 0, column = 1)
 
-    def set_population_label(self):  
+    def set_population_label(self):
 
-        self.population_label = ttk.Label(self.population_frame, text = round(self.population_slider.get())) 
+        self.population_label = ttk.Label(self.population_frame, text = round(self.population_slider.get()))
         self.population_label.grid(row = 0, column = 1)
 
 
@@ -1083,15 +981,15 @@ class Menu(tk.Tk):
         rows = round(self.row_slider.get())
         cols = round(self.col_slider.get())
 
-        community_size = population_size // (rows * cols) 
-        remainder = population_size  % (rows * cols) 
+        community_size = population_size // (rows * cols)
+        remainder = population_size  % (rows * cols)
 
         layout = []
         places_choice =  [0, 1, 2, 3]
-        places_weights = [0.4, 0.4, 0.15, 0.05] 
+        places_weights = [0.4, 0.4, 0.15, 0.05]
 
         for row in range(rows):
-            row_layout = [] 
+            row_layout = []
             for community in range(cols):
 
                 num_places = np.random.choice(places_choice, p=places_weights)
@@ -1099,15 +997,15 @@ class Menu(tk.Tk):
 
             layout.append(row_layout)
 
-        layout[0][0][0] += remainder 
+        layout[0][0][0] += remainder
 
         self.config['simulation']['community_layout'] = layout
         self.config['simulation']['total_population'] = population_size
         self.config['simulation']['susceptible'] = population_size
 
-        with open(self.config_addr, 'w') as config_file: 
+        with open(self.config_addr, 'w') as config_file:
             config_file.write(json.dumps(self.config))
-         
+
     def exit(self):
         self.save()
         self.destroy()
@@ -1135,7 +1033,7 @@ if __name__ == '__main__':
     with open('config.json', 'r') as config_file:
         config = json.loads(config_file.read())
 
-    sim_vars = config['simulation'] 
+    sim_vars = config['simulation']
     theme = config['theme'][config['app']['theme']]
 
     vars = config['pathogen']
@@ -1146,8 +1044,8 @@ if __name__ == '__main__':
         vars['infectiousness'],
         vars['lethality'])
 
-    # Start simulation 
+    # Start simulation
     simulation = Simulation()
     simulation.mainloop()
-    
+
 
