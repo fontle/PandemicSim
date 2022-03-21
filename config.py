@@ -2,8 +2,9 @@ import json
 import tkinter as tk
 from tkinter import ttk
 import numpy as np
+from dataclasses import dataclass
 
-class Config(tk.Tk):
+class _Menu(tk.Tk):
 
     def __init__(self, config_addr = 'config.json'):
         super().__init__()
@@ -12,6 +13,7 @@ class Config(tk.Tk):
         self.title('Simulation Configuration')
 
         self.config_addr = config_addr
+
         with open(self.config_addr, 'r') as config_file:
             self.config = json.loads(config_file.read())
 
@@ -48,7 +50,7 @@ class Config(tk.Tk):
         self.lethality_frame = ttk.LabelFrame(self.pathogen_frame, text='Lethality')
         self.lethality_frame.grid(row = 0, column = 0, padx = 5, pady = 5)
         self.lethality_var = tk.StringVar()
-        self.lethality_values = {'Low': 0.00001, 'Medium': 0.001, 'High': 0.05}
+        self.lethality_values = {'Low': '0.001', 'Medium': '0.0025', 'High': '0.05'}
 
         self.lethality_var.set(self.lethality_values['Medium'])
 
@@ -65,7 +67,7 @@ class Config(tk.Tk):
         self.curability_frame = ttk.LabelFrame(self.pathogen_frame, text='Curability')
         self.curability_frame.grid(row = 1, column = 0, padx = 5, pady = 5)
         self.curability_var = tk.StringVar()
-        self.curability_values = {'Low': 0.00001, 'Medium': 0.001, 'High': 0.05}
+        self.curability_values = {'Low': '0.01', 'Medium': '0.025', 'High': '0.05'}
         self.curability_var.set(self.curability_values['Medium'])
 
         for col, val in enumerate(self.curability_values.keys()):
@@ -81,7 +83,7 @@ class Config(tk.Tk):
         self.catchment_frame = ttk.LabelFrame(self.pathogen_frame, text='Catchment')
         self.catchment_frame.grid(row = 2, column = 0, padx = 5, pady = 5)
         self.catchment_var = tk.StringVar()
-        self.catchment_values = {'Low': 1, 'Medium': 5, 'High': 10}
+        self.catchment_values = {'Low': '1', 'Medium': '5', 'High': '10'}
         self.catchment_var.set(self.catchment_values['Medium'])
 
         for col, val in enumerate(self.catchment_values.keys()):
@@ -97,7 +99,7 @@ class Config(tk.Tk):
         self.infectiousness_frame = ttk.LabelFrame(self.pathogen_frame, text='Infectiousness')
         self.infectiousness_frame.grid(row = 3, column = 0, padx = 5, pady = 5)
         self.infectiousness_var = tk.StringVar()
-        self.infectiousness_values = {'Low': 0.03, 'Medium': 0.1, 'High': 0.25}
+        self.infectiousness_values = {'Low': '0.03', 'Medium': '0.1', 'High': '0.25'}
         self.infectiousness_var.set(self.infectiousness_values['Medium'])
 
         for col, val in enumerate(self.infectiousness_values.keys()):
@@ -116,7 +118,7 @@ class Config(tk.Tk):
         self.migrations_frame = ttk.LabelFrame(self.mitigation_frame, text='Migrations')
         self.migrations_frame.grid(row= 0, column= 0, padx= 5, pady= 5)
         self.migrations_var = tk.StringVar()
-        self.migrations_values = {'Low': 0.01, 'Medium': 0.1, 'High': 0.25}
+        self.migrations_values = {'Low': '0.01', 'Medium': '0.1', 'High': '0.25'}
         self.migrations_var.set(self.migrations_values['Medium'])
 
         for col, val in enumerate(self.migrations_values.keys()):
@@ -132,7 +134,7 @@ class Config(tk.Tk):
         self.movements_frame = ttk.LabelFrame(self.mitigation_frame, text='Movement Chance')
         self.movements_frame.grid(row= 1, column= 0, padx= 5, pady= 5)
         self.movements_var = tk.StringVar()
-        self.movements_values = {'Low': 0.01, 'Medium': 0.05, 'High': 0.15}
+        self.movements_values = {'Low': '0.01', 'Medium': '0.05', 'High': '0.15'}
         self.movements_var.set(self.movements_values['Medium'])
 
         for col, val in enumerate(self.movements_values.keys()):
@@ -206,13 +208,13 @@ class Config(tk.Tk):
 
         self.config['app']['theme'] = str(self.theme_var.get())
 
-        self.config['pathogen']['lethality'] = float(self.lethality_var.get())
-        self.config['pathogen']['curability'] = float(self.curability_var.get())
-        self.config['pathogen']['catchment'] = float(self.catchment_var.get())
-        self.config['pathogen']['catchment'] = float(self.catchment_var.get())
+        self.path_vars['lethality'] = float(self.lethality_var.get())
+        self.path_vars['curability'] = float(self.curability_var.get())
+        self.path_vars['catchment'] = float(self.catchment_var.get())
+        self.path_vars['catchment'] = float(self.catchment_var.get())
 
-        self.config['simulation']['migration_chance'] = float(self.migrations_var.get())
-        self.config['simulation']['move_chance'] = float(self.movements_var.get())
+        self.sim_vars['migration'] = float(self.migrations_var.get())
+        self.sim_vars['movement'] = float(self.movements_var.get())
 
         population_size = round(self.population_slider.get())
         rows = round(self.row_slider.get())
@@ -225,9 +227,9 @@ class Config(tk.Tk):
         places_choice =  [0, 1, 2, 3]
         places_weights = [0.4, 0.4, 0.15, 0.05]
 
-        for row in range(rows):
+        for _ in range(rows):
             row_layout = []
-            for community in range(cols):
+            for _ in range(cols):
 
                 num_places = np.random.choice(places_choice, p=places_weights)
                 row_layout.append([int(community_size), int(num_places)])
@@ -236,14 +238,64 @@ class Config(tk.Tk):
 
         layout[0][0][0] += remainder
 
-        self.config['simulation']['community_layout'] = layout
-        self.config['simulation']['total_population'] = population_size
-        self.config['simulation']['susceptible'] = population_size
-
-        with open(self.config_addr, 'w') as config_file:
-            config_file.write(json.dumps(self.config))
+        self.sim_vars['layout'] = layout
+        self.sim_vars['population'] = population_size
+        self.sim_vars['susceptible'] = population_size
 
     def exit(self):
         self.save()
         self.destroy()
+
+
+@dataclass
+class _Theme:
+    appbg: tuple[int,int,int]
+    simbg: tuple[int,int,int]
+    infected: tuple[int,int,int]
+    immune: tuple[int,int,int]
+    dead: tuple[int,int,int]
+    susceptible: tuple[int,int,int]
+    place: tuple[int,int,int]
+    route: tuple[int,int,int]
+    r_label : tuple[int,int,int]
+
+
+@dataclass
+class _Sim:
+    layout: list
+    movement: float
+    migration: float
+    population: int
+    dead: int
+    immune: int
+    susceptible: int
+    infected: int
+
+
+@dataclass
+class _App:
+    sim_size: tuple[int,int]
+    sidebar_width: int
+    bar_height: int
+    theme: str
+
+
+@dataclass
+class _Pathogen:
+    catchment: float
+    curability: float
+    infectiousness: float
+    lethality: float
+
+
+menu = _Menu()
+menu.mainloop()
+
+theme = _Theme(*menu.theme.values())
+sim = _Sim(*menu.sim_vars.values())
+app = _App(*menu.app_vars.values())
+pathogen = _Pathogen(*menu.path_vars.values())
+del menu
+
+
 
