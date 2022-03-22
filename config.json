@@ -1,109 +1,30 @@
 {
     "theme": {
         "dark": {
-            "appbg": [
-                22,
-                31,
-                40
-            ],
-            "simbg": [
-                44,
-                62,
-                80
-            ],
-            "infected": [
-                255,
-                87,
-                34
-            ],
-            "immune": [
-                25,
-                118,
-                210
-            ],
-            "dead": [
-                144,
-                164,
-                174
-            ],
-            "susceptible": [
-                238,
-                238,
-                238
-            ],
-            "place": [
-                200,
-                180,
-                200
-            ],
-            "route": [
-                0,
-                255,
-                255
-            ],
-            "r_label": [
-                0,
-                255,
-                85
-            ]
+            "appbg": [ 22, 31, 40 ],
+            "simbg": [ 44, 62, 80 ],
+            "infected": [ 255, 87, 34 ],
+            "immune": [ 25, 118, 210 ],
+            "dead": [ 144, 164, 174 ],
+            "susceptible": [ 238, 238, 238 ],
+            "place": [ 200, 180, 200 ],
+            "route": [ 0, 255, 255 ],
+            "r_label": [ 0, 255, 85 ]
         },
         "light": {
-            "app_background": [
-                189,
-                195,
-                199
-            ],
-            "community_background": [
-                250,
-                250,
-                250
-            ],
-            "infected": [
-                255,
-                87,
-                34
-            ],
-            "immune": [
-                25,
-                118,
-                210
-            ],
-            "dead": [
-                144,
-                164,
-                174
-            ],
-            "susceptible": [
-                238,
-                238,
-                238
-            ],
-            "place": [
-                60,
-                60,
-                60
-            ],
-            "route": [
-                0,
-                255,
-                255
-            ],
-            "r_label": [
-                0,
-                255,
-                85
-            ]
+            "appbg": [ 189, 195, 199 ],
+            "simbg": [ 250, 250, 250 ],
+            "infected": [ 255, 87, 34 ],
+            "immune": [ 25, 118, 210 ],
+            "dead": [ 144, 164, 174 ],
+            "susceptible": [ 238, 238, 238 ],
+            "place": [ 60, 60, 60 ],
+            "route": [ 0, 255, 255 ],
+            "r_label": [ 0, 255, 85 ]
         }
     },
     "simulation": {
-        "layout": [
-            [
-                [
-                    1000,
-                    0
-                ]
-            ]
-        ],
+        "layout": [ [ [ 1000, 0 ] ] ],
         "movement": 0.05,
         "migration": 0.1,
         "population": 1000,
@@ -113,12 +34,9 @@
         "infected": 0
     },
     "app": {
-        "sim_size": [
-            600,
-            600
-        ],
+        "sim_size": [ 600, 600 ],
         "sidebar_width": 200,
-        "bar_height": 200,
+        "bar_height": 100,
         "theme": "dark"
     },
     "pathogen": {

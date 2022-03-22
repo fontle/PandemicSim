@@ -50,7 +50,7 @@ class _Menu(tk.Tk):
         self.lethality_frame = ttk.LabelFrame(self.pathogen_frame, text='Lethality')
         self.lethality_frame.grid(row = 0, column = 0, padx = 5, pady = 5)
         self.lethality_var = tk.StringVar()
-        self.lethality_values = {'Low': '0.001', 'Medium': '0.0025', 'High': '0.05'}
+        self.lethality_values = {'Low': '0.001', 'Medium': '0.002', 'High': '0.005'}
 
         self.lethality_var.set(self.lethality_values['Medium'])
 
@@ -67,7 +67,7 @@ class _Menu(tk.Tk):
         self.curability_frame = ttk.LabelFrame(self.pathogen_frame, text='Curability')
         self.curability_frame.grid(row = 1, column = 0, padx = 5, pady = 5)
         self.curability_var = tk.StringVar()
-        self.curability_values = {'Low': '0.01', 'Medium': '0.025', 'High': '0.05'}
+        self.curability_values = {'Low': '0.001', 'Medium': '0.0025', 'High': '0.005'}
         self.curability_var.set(self.curability_values['Medium'])
 
         for col, val in enumerate(self.curability_values.keys()):
@@ -179,11 +179,36 @@ class _Menu(tk.Tk):
         self.col_label = ttk.Label(self.col_frame, text = round(self.col_slider.get()))
         self.col_label.grid(row = 0, column = 1)
 
-        self.save_button = ttk.Button(self, text='Save', command=lambda:self.save())
-        self.save_button.grid(row = 2, column = 0, pady = 5)
+        self.size_frame = ttk.LabelFrame(self.column1, text = 'Simulation Size')
+        self.size_frame.pack(side= tk.TOP, padx = 5, pady = 0)
 
-        self.exit_button = ttk.Button(self, text='Exit', command=lambda:self.exit())
-        self.exit_button.grid(row = 2, column = 1)
+        self.width_frame = ttk.LabelFrame(self.size_frame, text = 'Width')
+        self.width_frame.grid(row = 0, column = 0, padx = 5, pady = 5)
+
+        self.width_slider = ttk.Scale(self.width_frame, from_ = 360, to = 1000, orient = 'horizontal', command=lambda _ :self.set_width_label())
+        self.width_slider.set(600)
+        self.width_slider.grid(row = 0, column = 0, padx = 5, pady = 5)
+
+        self.width_label = ttk.Label(self.width_frame, text = round(self.width_slider.get()))
+        self.width_label.grid(row = 0, column = 1)
+
+        self.height_frame = ttk.LabelFrame(self.size_frame, text = 'Height')
+        self.height_frame.grid(row = 1, column = 0, padx = 5, pady = 5)
+
+        self.height_slider = ttk.Scale(self.height_frame, from_ = 200, to = 600, orient = 'horizontal', command=lambda _ :self.set_height_label())
+        self.height_slider.set(600)
+        self.height_slider.grid(row = 0, column = 0, padx = 5, pady = 5)
+
+        self.height_label = ttk.Label(self.height_frame, text = round(self.height_slider.get()))
+        self.height_label.grid(row = 0, column = 1)
+
+        self.button_frame = ttk.Frame(self.column0)
+        self.button_frame.pack(side=tk.TOP, pady= 5)
+        self.save_button = ttk.Button(self.button_frame, text='Save', command=lambda:self.save())
+        self.save_button.grid(row = 0, column = 0, padx = 10)
+
+        self.exit_button = ttk.Button(self.button_frame, text='Close', command=lambda:self.exit())
+        self.exit_button.grid(row = 0, column = 1, padx = 10)
 
 
     def set_row_label(self):
@@ -196,6 +221,18 @@ class _Menu(tk.Tk):
 
         self.col_label = ttk.Label(self.col_frame, text = round(self.col_slider.get()))
         self.col_label.grid(row = 0, column = 1)
+
+
+    def set_height_label(self):
+
+        self.height_label = ttk.Label(self.height_frame, text = round(self.height_slider.get()))
+        self.height_label.grid(row = 0, column = 1)
+
+
+    def set_width_label(self):
+
+        self.width_label = ttk.Label(self.width_frame, text = round(self.width_slider.get()))
+        self.width_label.grid(row = 0, column = 1)
 
 
     def set_population_label(self):
@@ -224,23 +261,27 @@ class _Menu(tk.Tk):
         remainder = population_size  % (rows * cols)
 
         layout = []
+
+        # Assigne a weighted probability for a community having different amount of places
         places_choice =  [0, 1, 2, 3]
         places_weights = [0.4, 0.4, 0.15, 0.05]
-
         for _ in range(rows):
             row_layout = []
             for _ in range(cols):
-
                 num_places = np.random.choice(places_choice, p=places_weights)
                 row_layout.append([int(community_size), int(num_places)])
-
             layout.append(row_layout)
-
+        # Add excess population to first community
         layout[0][0][0] += remainder
 
         self.sim_vars['layout'] = layout
         self.sim_vars['population'] = population_size
         self.sim_vars['susceptible'] = population_size
+
+        # Round width and height to nearest 10 to prevent weird remainders
+        width = round(int(self.width_slider.get())/10)*10
+        height = round(int(self.height_slider.get())/10)*10
+        self.app_vars['sim_size'] = width, height
 
     def exit(self):
         self.save()
@@ -297,5 +338,10 @@ app = _App(*menu.app_vars.values())
 pathogen = _Pathogen(*menu.path_vars.values())
 del menu
 
+if __name__ == '__main__':
+    print(theme.__dict__)
+    print(sim.__dict__)
+    print(app.__dict__)
+    print(pathogen.__dict__)
 
 

@@ -67,8 +67,10 @@ class Pathogen:
             person.cure_chance += self.curability
 
         if random.random() < self.lethality:
-
             person.kill()
+            return
+        else:
+            person.death_chance += self.lethality
 
 
 class Graph:
@@ -448,6 +450,7 @@ class Person(pygame.sprite.Sprite):
         self.immune = False
         self.infected = False
         self.cure_chance = 0
+        self.death_chance = 0
         self.despawn_time = 300 # Equivalent to 5s at 60hz
 
         # Route behaviour
@@ -671,7 +674,6 @@ class Community:
 
         # Create places in community
         self.places = pygame.sprite.Group()
-
         for _ in range(places):
             self.places.add(Place(self.surf_size))
 
