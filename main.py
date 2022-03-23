@@ -23,11 +23,11 @@ class Pathogen:
         self.infectiousness = config.pathogen.infectiousness
         # The probability infected would die every cycle
         self.lethality = config.pathogen.lethality
-        # The rate at which the probability of someone being cured from the disease increases every cycle
+        # The rate at which the probability of someone being cured from the
+        # disease increases every cycle
         self.curability = config.pathogen.curability
 
-
-    def infect(self, susceptible, infected) -> None:
+def infect(self, susceptible, infected) -> None:
         '''
         Purpose: Given two people who have been in contact;
         returns whether the infected person infects the other 'person'
