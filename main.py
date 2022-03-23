@@ -62,7 +62,6 @@ class Pathogen:
         if random.random() < self.curability:
             person.cure(True)
             return
-
         else:
             person.cure_chance += self.curability
 
@@ -83,26 +82,39 @@ class Graph:
         font: pygame.font.SysFont()
         title: str that is shown as caption to graph
 
+
+    Window Constants:
+            ^
+            |                n_buff
+            |
+            |          |              /
+            |          |    _________/
+     height |  w_buff  |   /                e_buff
+            |          |  /
+            |          | /
+            |          |___________________
+            |
+            ⌄                s_buff
+            <------------------------------------------>
+                              width
     '''
 
     def __init__(self, size: tuple[int, int], font:pygame.font.SysFont, title = ''):
 
         global stats, pathogen
 
-        # Initialise vars
+        # Initialise Pygame Vars
         self.surf = pygame.Surface((size))
         self.font = font
-        # Render title in initialisation as will never change
         self.title = self.font.render(title, True, config.theme.susceptible)
-        # Format dimensions of frame
         self.width, self.height = size
+
+        # Create buffers for rendering
         self.n_buff = self.height // 10
-
-        # Puts graph in line with simulation as uses same buff as community
         self.s_buff = config.app.sim_size[1]/(len(config.sim.layout)*10)
-
         self.w_buff = 0
         self.e_buff = self.width // 10
+
         # Create values to be plotted
         self.values = {
             tuple(config.theme.infected) : [stats.infected],
@@ -122,7 +134,7 @@ class Graph:
         self.values[tuple(config.theme.immune)].append(stats.immune)
 
 
-    def __draw_axis(self):
+    def __draw_axis(self) -> None:
 
         self.y_max = config.sim.population
 
@@ -151,7 +163,7 @@ class Graph:
         self.x_scale = (self.width-self.e_buff-self.w_buff)/self.x_max
 
 
-    def __draw_plots(self):
+    def __draw_plots(self) -> None:
 
         # Plot points for each line
         for (line_colour, line_values) in self.values.items():
@@ -179,9 +191,6 @@ class Graph:
     def draw(self) -> None:
         '''
         Draws graph and its values onto surface.
-
-        Args:
-            maximum: integer, sets the maximum value of the y-axis (optional)
         '''
 
         self.surf.fill(config.theme.appbg)
@@ -192,11 +201,14 @@ class Graph:
 
 @dataclass
 class Stats:
+    '''
+    Dataclass that controls counters for the simulation
+    '''
     infected = config.sim.infected
     susceptible = config.sim.susceptible
     dead = config.sim.dead
     immune = config.sim.immune
-    old_infected = 1
+    old_infected = 1 # Used to calculate r number
 
 
 class Simulation:
@@ -213,7 +225,7 @@ class Simulation:
 
         self.communities = self.__calc_communities()
 
-        # Create application size defined by config json
+        # Create application
         window_size = (config.app.sim_size[0] + config.app.sidebar_width, config.app.sim_size[1] + config.app.bar_height)
         self.window = pygame.display.set_mode(window_size)
         pygame.display.set_caption('Pandemic Simulation')
@@ -222,10 +234,8 @@ class Simulation:
         # Create GUI layout
         self.sim_surf= pygame.Surface(config.app.sim_size)
         self.sidebar_surf = pygame.Surface((config.app.sidebar_width, config.app.sim_size[1]))
-
         self.botbar_surf = pygame.Surface((config.app.sim_size[0], config.app.bar_height))
         self.controls_surf = pygame.Surface((config.app.sidebar_width, config.app.bar_height))
-
 
         # Font Initialisation
         self.font_size = config.app.sim_size[1] // 25
@@ -234,6 +244,7 @@ class Simulation:
         # Create graph to be rendered in sidebar
         self.graph = Graph((config.app.sidebar_width, config.app.sim_size[1]//2), self.font)
 
+        # Define the frame rate of simulation, depending on speed
         self.delay = 0.016
         self.speed_states = {
             0.008 : render.fast_symbol,
@@ -254,12 +265,13 @@ class Simulation:
         height = round((sim_height - (self.y_buffer*(len(layout)+1))) / len(layout))
 
         # Create each community in grid defined by layout
-        for y, cols in enumerate(layout): # y counts how many rows in
-            x_buffer = sim_width/(len(cols)*10) # The pixels between each column of communities
-            # Round to prevent floating error when dividing
+        for y, cols in enumerate(layout):
+
+            x_buffer = sim_width/(len(cols)*10)
+
             width = round((sim_width - (x_buffer*(len(cols)+1))) / len(cols))
-            for x, (pop, places) in enumerate(cols): # x counts how many columns in
-                # Round do prevent float error when dividing
+            for x, (pop, places) in enumerate(cols):
+
                 coords = round((x*(width+x_buffer)+x_buffer)), round(y*(height+self.y_buffer)+self.y_buffer)
                 communities.append(Community(coords, (width, height), pop, places))
 
@@ -336,18 +348,19 @@ class Simulation:
         Instantiates pygame window and starts the simulation.
         '''
 
+        # Infect first person
         self.communities[0].population.sprites()[0].infect()
-        bgcolor = config.theme.appbg
+
         self.running = True
         while self.running:
 
             # Fill backgrounds for re-rendering
-            self.sim_surf.fill(bgcolor)
-            self.sidebar_surf.fill(bgcolor)
-            self.controls_surf.fill(bgcolor)
-            self.botbar_surf.fill(bgcolor)
+            self.sim_surf.fill(config.theme.appbg)
+            self.sidebar_surf.fill(config.theme.appbg)
+            self.controls_surf.fill(config.theme.appbg)
+            self.botbar_surf.fill(config.theme.appbg)
 
-            # Update info
+            # Update statistics and graphs
             self.__render_sidebar()
             self.__render_graph()
 
@@ -356,31 +369,23 @@ class Simulation:
 
                 community.surf.fill(config.theme.simbg)
 
-                # Update the population of the community (state and movement)
-                community.update()
-
-                # Calculate movements and routing to places
-                community.calc_movement_events()
-                # Perform migration event calculation and migrate people to new communities
-                persons_migrated = community.calc_migration_events()
+                persons_migrated = community.update()
 
                 # If there is only one community, do not go through with migration process
                 valid = [x for x in self.communities if x is not community]
                 if len(valid) > 0:
 
+                    # Remove migrant from old community and add to new community
                     for person in persons_migrated:
-                        # Migration can occur within a community (ie. Go-to someones house, or cross communities)
-                        new_community = random.choice(valid)
                         community.population.remove(person)
                         person.set_random_location()
+                        new_community = random.choice(valid)
                         person.community_size = new_community.surf_size
                         new_community.population.add(person)
 
-                # Render places to surface
+                # Draw changes to surface and render to window
                 community.places.draw(community.surf)
-                # Render population to the community surface
                 community.population.draw(community.surf)
-                # Render community surface to main window
                 self.sim_surf.blit(community.surf, community.coords)
 
             # Event handler
@@ -677,10 +682,13 @@ class Community:
         for _ in range(places):
             self.places.add(Place(self.surf_size))
 
-    def update(self):
+    def update(self) -> list:
         '''
         Updates the state (dead, immune, susceptible, or infected)
         of people within the community.
+
+        Returns:
+            A list of people objects to be migrated to another community
         '''
 
         population_list = self.population.sprites()
@@ -718,8 +726,11 @@ class Community:
 
            pathogen.update_health(zombie)
 
+        self.__calc_movement_events()
+        return self.__calc_migration_events()
 
-    def calc_movement_events(self):
+
+    def __calc_movement_events(self):
         '''
         Manages whether a person heads to a place in a community
         '''
@@ -740,7 +751,7 @@ class Community:
             valid.remove(mover)
 
 
-    def calc_migration_events(self):
+    def __calc_migration_events(self):
         '''
         Manages whether migrations occur.
         '''
